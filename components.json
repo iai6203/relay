@@ -1,8 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
   "style": "radix-mira",
-  "menuColor": "default",
-  "menuAccent": "subtle",
   "rsc": false,
   "tsx": true,
   "tailwind": {
@@ -12,6 +10,9 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "lucide",
+  "menuColor": "default",
+  "menuAccent": "subtle",
   "aliases": {
     "components": "@/components",
     "utils": "@/utils/tailwind",
@@ -19,5 +20,7 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "iconLibrary": "lucide"
+  "registries": {
+    "@ai-elements": "https://ai-sdk.dev/elements/api/registry/{name}.json"
+  }
 }

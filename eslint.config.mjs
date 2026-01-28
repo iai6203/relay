@@ -17,6 +17,9 @@ const prettierIgnorePath = path.resolve(__dirname, ".prettierignore");
 export default defineConfig([
   includeIgnoreFile(prettierIgnorePath),
   {
+    ignores: ["src/components/ai-elements/**"],
+  },
+  {
     files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
   },
   { languageOptions: { globals: globals.browser } },
