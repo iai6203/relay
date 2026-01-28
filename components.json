@@ -21,6 +21,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@ai-elements": "https://ai-sdk.dev/elements/api/registry/{name}.json"
+    "@ai-elements": "https://ai-sdk.dev/elements/api/registry/{name}.json",
+    "@shadcraft": "https://free.shadcraft.com/r/{name}.json"
   }
 }

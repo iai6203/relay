@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import LangToggle from "@/components/lang-toggle";
 import { createFileRoute } from "@tanstack/react-router";
 import { SiElectron, SiReact, SiVite } from "@icons-pack/react-simple-icons";
-import NavigationMenu from "@/components/navigation-menu";
 import { getAppVersion } from "@/actions/app";
 import { useEffect, useState, useTransition } from "react";
 import ExternalLink from "@/components/external-link";
@@ -27,7 +26,6 @@ function HomePage() {
 
   return (
     <>
-      <NavigationMenu />
       <div className="flex h-full flex-col items-center justify-center">
         <div className="flex flex-col items-end justify-center gap-0.5">
           <div className="inline-flex gap-2">
