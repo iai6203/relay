@@ -132,4 +132,7 @@
   .draglayer {
     -webkit-app-region: drag;
   }
+  button {
+    cursor: pointer;
+  }
 }

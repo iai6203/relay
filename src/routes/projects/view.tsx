@@ -1,0 +1,450 @@
+import { useCallback, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import type { ChatStatus } from "ai";
+import { z } from "zod";
+import { MessageCircleIcon } from "lucide-react";
+
+import type { ToolPart } from "@/components/ai-elements/tool";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import {
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputFooter,
+  PromptInputTools,
+  PromptInputSubmit,
+  PromptInputActionMenu,
+  PromptInputActionMenuTrigger,
+  PromptInputActionMenuContent,
+  PromptInputActionAddAttachments,
+  type PromptInputMessage,
+} from "@/components/ai-elements/prompt-input";
+import {
+  Tool,
+  ToolHeader,
+  ToolContent,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
+import {
+  Confirmation,
+  ConfirmationTitle,
+  ConfirmationRequest,
+  ConfirmationAccepted,
+  ConfirmationRejected,
+  ConfirmationActions,
+  ConfirmationAction,
+} from "@/components/ai-elements/confirmation";
+import { ipc } from "@/ipc/manager";
+
+type ToolCallStatus =
+  | "running"
+  | "completed"
+  | "error"
+  | "approval-requested"
+  | "denied";
+
+type MessageBlock =
+  | { type: "text"; text: string }
+  | {
+      type: "tool_call";
+      toolUseId: string;
+      toolName: string;
+      input: Record<string, unknown>;
+      status: ToolCallStatus;
+      output?: string;
+      isError?: boolean;
+    }
+  | {
+      type: "permission_request";
+      requestId: string;
+      toolUseId: string;
+      toolName: string;
+      input: Record<string, unknown>;
+      decisionReason?: string;
+      blockedPath?: string;
+      decision?: "allow" | "deny";
+    };
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  blocks: MessageBlock[];
+}
+
+function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
+  switch (status) {
+    case "running":
+      return "input-available";
+    case "completed":
+      return "output-available";
+    case "error":
+      return "output-error";
+    case "approval-requested":
+      return "approval-requested";
+    case "denied":
+      return "output-denied";
+  }
+}
+
+const searchSchema = z.object({
+  path: z.string(),
+});
+
+function ProjectViewPage() {
+  const { path } = Route.useSearch();
+
+  const [sessionId, setSessionId] = useState<string>();
+  const [status, setStatus] = useState<ChatStatus>("ready");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const handlePermissionResponse = useCallback(
+    async (
+      requestId: string,
+      toolUseId: string,
+      decision: "allow" | "deny",
+      message?: string,
+    ) => {
+      await ipc.client.ai.respondToPermission({
+        requestId,
+        decision,
+        message,
+      });
+
+      setMessages((prev) =>
+        prev.map((msg) => ({
+          ...msg,
+          blocks: msg.blocks.map((b) => {
+            if (b.type === "permission_request" && b.requestId === requestId) {
+              return { ...b, decision };
+            }
+            if (b.type === "tool_call" && b.toolUseId === toolUseId) {
+              return {
+                ...b,
+                status:
+                  decision === "allow"
+                    ? ("running" as const)
+                    : ("denied" as const),
+              };
+            }
+            return b;
+          }),
+        })),
+      );
+    },
+    [],
+  );
+
+  const handleSubmit = useCallback(
+    async (message: PromptInputMessage) => {
+      if (!message.text.trim()) return;
+
+      const userMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: message.text,
+        blocks: [],
+      };
+
+      const assistantId = crypto.randomUUID();
+      const assistantMessage: ChatMessage = {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        blocks: [],
+      };
+
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setStatus("submitted");
+
+      try {
+        const stream = await ipc.client.ai.chat({
+          cwd: path,
+          sessionId,
+          prompt: message.text,
+        });
+
+        for await (const event of stream) {
+          switch (event.type) {
+            case "init":
+              setSessionId(event.sessionId);
+              break;
+
+            case "text":
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId
+                    ? {
+                        ...msg,
+                        content: msg.content + event.text,
+                        blocks: [
+                          ...msg.blocks,
+                          { type: "text" as const, text: event.text },
+                        ],
+                      }
+                    : msg,
+                ),
+              );
+              break;
+
+            case "tool_call":
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId
+                    ? {
+                        ...msg,
+                        blocks: [
+                          ...msg.blocks,
+                          {
+                            type: "tool_call" as const,
+                            toolUseId: event.toolUseId,
+                            toolName: event.toolName,
+                            input: event.input,
+                            status: "running" as const,
+                          },
+                        ],
+                      }
+                    : msg,
+                ),
+              );
+              break;
+
+            case "permission_request":
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id !== assistantId) return msg;
+                  return {
+                    ...msg,
+                    blocks: msg.blocks
+                      .map((b) =>
+                        b.type === "tool_call" &&
+                        b.toolUseId === event.toolUseId
+                          ? {
+                              ...b,
+                              status: "approval-requested" as const,
+                            }
+                          : b,
+                      )
+                      .concat({
+                        type: "permission_request" as const,
+                        requestId: event.requestId,
+                        toolUseId: event.toolUseId,
+                        toolName: event.toolName,
+                        input: event.input,
+                        decisionReason: event.decisionReason,
+                        blockedPath: event.blockedPath,
+                      }),
+                  };
+                }),
+              );
+              break;
+
+            case "tool_result":
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id !== assistantId) return msg;
+                  return {
+                    ...msg,
+                    blocks: msg.blocks.map((b) =>
+                      b.type === "tool_call" && b.toolUseId === event.toolUseId
+                        ? {
+                            ...b,
+                            status: event.isError
+                              ? ("error" as const)
+                              : ("completed" as const),
+                            output: event.output,
+                            isError: event.isError,
+                          }
+                        : b,
+                    ),
+                  };
+                }),
+              );
+              break;
+
+            case "result":
+              if (event.sessionId) {
+                setSessionId(event.sessionId);
+              }
+              break;
+
+            case "error":
+              console.error("[chat stream] error:", event.message);
+              break;
+          }
+        }
+      } catch (error) {
+        console.error("Chat error:", error);
+      } finally {
+        setStatus("ready");
+      }
+    },
+    [path, sessionId],
+  );
+
+  return (
+    <div className="flex h-full flex-col pb-4">
+      <Conversation>
+        <ConversationContent>
+          {messages.length === 0 ? (
+            <ConversationEmptyState
+              icon={<MessageCircleIcon className="size-8" />}
+              title="No messages yet"
+              description="Type a message below to start a conversation."
+            />
+          ) : (
+            messages.map((msg) => (
+              <Message key={msg.id} from={msg.role}>
+                <MessageContent>
+                  {msg.role === "user" ? (
+                    msg.content
+                  ) : (
+                    <>
+                      {msg.blocks.map((block, i) => {
+                        if (block.type === "text") {
+                          return (
+                            <MessageResponse key={i}>
+                              {block.text}
+                            </MessageResponse>
+                          );
+                        }
+
+                        if (block.type === "tool_call") {
+                          return (
+                            <Tool key={block.toolUseId}>
+                              <ToolHeader
+                                title={block.toolName}
+                                type="dynamic-tool"
+                                state={mapStatusToToolState(block.status)}
+                                toolName={block.toolName}
+                              />
+                              <ToolContent>
+                                <ToolInput input={block.input} />
+                                {block.output != null && (
+                                  <ToolOutput
+                                    output={block.output}
+                                    errorText={
+                                      block.isError ? block.output : undefined
+                                    }
+                                  />
+                                )}
+                              </ToolContent>
+                            </Tool>
+                          );
+                        }
+
+                        if (block.type === "permission_request") {
+                          const permState =
+                            block.decision == null
+                              ? "approval-requested"
+                              : "approval-responded";
+
+                          const approval =
+                            block.decision == null
+                              ? { id: block.requestId }
+                              : {
+                                  id: block.requestId,
+                                  approved: block.decision === "allow",
+                                };
+
+                          return (
+                            <Confirmation
+                              key={block.requestId}
+                              approval={approval}
+                              state={permState as ToolPart["state"]}
+                            >
+                              <ConfirmationTitle>
+                                <span className="font-semibold">
+                                  {block.toolName}
+                                </span>
+                                {block.decisionReason &&
+                                  ` — ${block.decisionReason}`}
+                              </ConfirmationTitle>
+
+                              <ConfirmationRequest>
+                                <ToolInput input={block.input} />
+                                <ConfirmationActions>
+                                  <ConfirmationAction
+                                    variant="outline"
+                                    onClick={() =>
+                                      handlePermissionResponse(
+                                        block.requestId,
+                                        block.toolUseId,
+                                        "deny",
+                                        "User denied permission",
+                                      )
+                                    }
+                                  >
+                                    Deny
+                                  </ConfirmationAction>
+                                  <ConfirmationAction
+                                    onClick={() =>
+                                      handlePermissionResponse(
+                                        block.requestId,
+                                        block.toolUseId,
+                                        "allow",
+                                      )
+                                    }
+                                  >
+                                    Allow
+                                  </ConfirmationAction>
+                                </ConfirmationActions>
+                              </ConfirmationRequest>
+
+                              <ConfirmationAccepted>
+                                <span className="text-green-600">Approved</span>
+                              </ConfirmationAccepted>
+
+                              <ConfirmationRejected>
+                                <span className="text-red-600">Denied</span>
+                              </ConfirmationRejected>
+                            </Confirmation>
+                          );
+                        }
+
+                        return null;
+                      })}
+                    </>
+                  )}
+                </MessageContent>
+              </Message>
+            ))
+          )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+
+      <div className="mx-auto w-full">
+        <PromptInput onSubmit={handleSubmit}>
+          <PromptInputTextarea placeholder="Message" />
+          <PromptInputFooter>
+            <PromptInputTools>
+              <PromptInputActionMenu>
+                <PromptInputActionMenuTrigger />
+                <PromptInputActionMenuContent>
+                  <PromptInputActionAddAttachments />
+                </PromptInputActionMenuContent>
+              </PromptInputActionMenu>
+            </PromptInputTools>
+            <PromptInputSubmit status={status} />
+          </PromptInputFooter>
+        </PromptInput>
+      </div>
+    </div>
+  );
+}
+
+export const Route = createFileRoute("/projects/view")({
+  validateSearch: searchSchema,
+  component: ProjectViewPage,
+});
