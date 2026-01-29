@@ -14,9 +14,12 @@ export const getSessions = os
   .handler(({ input }) => {
     const all = store.get("chatHistories");
     const sessions = all[input.projectPath] ?? [];
-    return sessions.map(
-      ({ messages: _, ...meta }) => meta,
-    ) as Omit<ChatSession, "messages">[];
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return sessions.map(({ messages, ...meta }) => meta) as Omit<
+      ChatSession,
+      "messages"
+    >[];
   });
 
 export const getSession = os
