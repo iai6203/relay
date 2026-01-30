@@ -33,12 +33,3 @@ export interface ChatMessage {
   content: string;
   blocks: MessageBlock[];
 }
-
-export interface ChatSession {
-  id: string;
-  sessionId?: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-  messages: ChatMessage[];
-}
