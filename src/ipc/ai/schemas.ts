@@ -4,6 +4,7 @@ export const chatInputSchema = z.object({
   cwd: z.string().optional(),
   sessionId: z.string().optional(),
   prompt: z.string().min(1),
+  autoApprove: z.boolean().optional(),
 });
 
 export const chatEventSchema = z.discriminatedUnion("type", [

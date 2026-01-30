@@ -114,6 +114,12 @@ export const chat = os
           options: {
             model: "claude-sonnet-4-5",
             pathToClaudeCodeExecutable: findClaudeExecutable(),
+            allowedTools: [
+              "Read",
+              ...(input.autoApprove
+                ? ["Write", "Bash", "Edit"]
+                : []),
+            ],
             canUseTool,
             ...(input.cwd ? { cwd: input.cwd } : {}),
             ...(input.sessionId ? { resume: input.sessionId } : {}),
