@@ -32,37 +32,9 @@ const messageBlockSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-const chatMessageSchema = z.object({
+export const chatMessageSchema = z.object({
   id: z.string(),
   role: z.enum(["user", "assistant"]),
   content: z.string(),
   blocks: z.array(messageBlockSchema),
-});
-
-const chatSessionSchema = z.object({
-  id: z.string(),
-  sessionId: z.string().optional(),
-  title: z.string(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
-  messages: z.array(chatMessageSchema),
-});
-
-export const getSessionsInputSchema = z.object({
-  projectPath: z.string(),
-});
-
-export const getSessionInputSchema = z.object({
-  projectPath: z.string(),
-  sessionId: z.string(),
-});
-
-export const saveSessionInputSchema = z.object({
-  projectPath: z.string(),
-  session: chatSessionSchema,
-});
-
-export const deleteSessionInputSchema = z.object({
-  projectPath: z.string(),
-  sessionId: z.string(),
 });

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ChatStatus } from "ai";
 import { z } from "zod";
-import { MessageCircleIcon, PlusIcon, ShieldCheckIcon } from "lucide-react";
+import { MessageCircleIcon, ShieldCheckIcon } from "lucide-react";
 
 import type { ToolPart } from "@/components/ai-elements/tool";
 import {
@@ -44,22 +44,10 @@ import {
   ConfirmationActions,
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ipc } from "@/ipc/manager";
-import type {
-  ToolCallStatus,
-  ChatMessage,
-  ChatSession,
-} from "@/ipc/chat/types";
+import type { ToolCallStatus, ChatMessage } from "@/ipc/chat/types";
 
 function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
   switch (status) {
@@ -80,14 +68,6 @@ const searchSchema = z.object({
   path: z.string(),
 });
 
-interface SessionMeta {
-  id: string;
-  sessionId?: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
 function ProjectViewPage() {
   const { path } = Route.useSearch();
 
@@ -95,80 +75,6 @@ function ProjectViewPage() {
   const [status, setStatus] = useState<ChatStatus>("ready");
   const [autoApprove, setAutoApprove] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string>();
-  const [sessions, setSessions] = useState<SessionMeta[]>([]);
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
-  const sessionIdRef = useRef(sessionId);
-  sessionIdRef.current = sessionId;
-  const currentSessionIdRef = useRef(currentSessionId);
-  currentSessionIdRef.current = currentSessionId;
-
-  useEffect(() => {
-    ipc.client.chat
-      .getSessions({ projectPath: path })
-      .then((result) => setSessions(result as SessionMeta[]));
-  }, [path]);
-
-  const saveCurrentSession = useCallback(
-    async (msgs: ChatMessage[], sdkSessionId?: string) => {
-      const curId = currentSessionIdRef.current;
-      if (msgs.length === 0) return;
-
-      const firstUserMsg = msgs.find((m) => m.role === "user");
-      const title = firstUserMsg
-        ? firstUserMsg.content.slice(0, 50)
-        : "New Chat";
-
-      const now = Date.now();
-      const session: ChatSession = {
-        id: curId ?? crypto.randomUUID(),
-        sessionId: sdkSessionId,
-        title,
-        createdAt: curId
-          ? (sessions.find((s) => s.id === curId)?.createdAt ?? now)
-          : now,
-        updatedAt: now,
-        messages: msgs,
-      };
-
-      if (!curId) {
-        setCurrentSessionId(session.id);
-      }
-
-      await ipc.client.chat.saveSession({
-        projectPath: path,
-        session,
-      });
-
-      const updated = await ipc.client.chat.getSessions({
-        projectPath: path,
-      });
-      setSessions(updated as SessionMeta[]);
-    },
-    [path, sessions],
-  );
-
-  const loadSession = useCallback(
-    async (id: string) => {
-      const session = await ipc.client.chat.getSession({
-        projectPath: path,
-        sessionId: id,
-      });
-      if (!session) return;
-
-      setCurrentSessionId(session.id);
-      setSessionId(session.sessionId ?? undefined);
-      setMessages(session.messages as ChatMessage[]);
-    },
-    [path],
-  );
-
-  const startNewChat = useCallback(() => {
-    setCurrentSessionId(undefined);
-    setSessionId(undefined);
-    setMessages([]);
-  }, []);
 
   const handlePermissionResponse = useCallback(
     async (
@@ -350,42 +256,13 @@ function ProjectViewPage() {
         console.error("Chat error:", error);
       } finally {
         setStatus("ready");
-        saveCurrentSession(messagesRef.current, sessionIdRef.current);
       }
     },
-    [path, sessionId, autoApprove, saveCurrentSession],
+    [path, sessionId, autoApprove],
   );
 
   return (
     <div className="flex h-full flex-col pb-4">
-      <div className="flex items-center gap-2 border-b px-4 py-2">
-        <Select
-          value={currentSessionId ?? "__new__"}
-          onValueChange={(value) => {
-            if (value === "__new__") {
-              startNewChat();
-            } else {
-              loadSession(value);
-            }
-          }}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="New Chat" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__new__">New Chat</SelectItem>
-            {sessions.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="icon" onClick={startNewChat}>
-          <PlusIcon className="size-4" />
-        </Button>
-      </div>
-
       <Conversation>
         <ConversationContent>
           {messages.length === 0 ? (
