@@ -1,6 +1,6 @@
 import { ai } from "./ai";
 import { app } from "./app";
-import { chatHistory } from "./chat-history";
+import { chat } from "./chat";
 import { project } from "./project";
 import { shell } from "./shell";
 import { theme } from "./theme";
@@ -8,7 +8,7 @@ import { window } from "./window";
 
 export const router = {
   ai,
-  chatHistory,
+  chat,
   theme,
   window,
   app,

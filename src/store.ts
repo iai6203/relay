@@ -1,6 +1,6 @@
 import Store from "electron-store";
 
-import type { ChatSession } from "./ipc/chat-history/types";
+import type { ChatSession } from "./ipc/chat/types";
 
 export interface Project {
   path: string;
@@ -10,7 +10,7 @@ export interface Project {
 
 interface StoreSchema {
   projects: Project[];
-  chatHistories: Record<string, ChatSession[]>;
+  chats: Record<string, ChatSession[]>;
 }
 
 const schema = {
@@ -27,7 +27,7 @@ const schema = {
     },
     default: [] as Project[],
   },
-  chatHistories: {
+  chats: {
     type: "object" as const,
     additionalProperties: {
       type: "array" as const,
