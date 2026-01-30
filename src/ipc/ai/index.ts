@@ -1,9 +1,4 @@
-import {
-  chat,
-  getSession,
-  getSessions,
-  respondToPermission,
-} from "./handlers";
+import { chat, getSession, getSessions, respondToPermission } from "./handlers";
 
 export const ai = {
   chat,

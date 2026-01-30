@@ -2,7 +2,11 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { os, eventIterator } from "@orpc/server";
 
-import { findClaudeExecutable, readSession, readSessions } from "@/utils/claude";
+import {
+  findClaudeExecutable,
+  readSession,
+  readSessions,
+} from "@/utils/claude";
 import { permissionBus } from "./permission-bus";
 import {
   chatInputSchema,

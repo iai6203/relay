@@ -2,7 +2,12 @@ import { useCallback, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ChatStatus } from "ai";
 import { z } from "zod";
-import { HistoryIcon, MessageCircleIcon, PlusIcon, ShieldCheckIcon } from "lucide-react";
+import {
+  HistoryIcon,
+  MessageCircleIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 
 import type { ToolPart } from "@/components/ai-elements/tool";
 import {

@@ -47,9 +47,9 @@ export async function readSessions(path: string) {
             typeof content === "string"
               ? content
               : Array.isArray(content)
-                ? content.find(
+                ? (content.find(
                     (block: { type?: string }) => block.type === "text",
-                  )?.text ?? null
+                  )?.text ?? null)
                 : null;
           break;
         }
@@ -135,7 +135,8 @@ function parseSessionEntries(
 
       if (blocks.length === 0) continue;
 
-      const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+      const lastMsg =
+        messages.length > 0 ? messages[messages.length - 1] : null;
 
       if (lastMsg?.role === "assistant") {
         lastMsg.content += text;
