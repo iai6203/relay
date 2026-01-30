@@ -1,26 +1,17 @@
-import { execSync } from "node:child_process";
-
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { os, eventIterator } from "@orpc/server";
 
+import { findClaudeExecutable, readSession, readSessions } from "@/utils/claude";
 import { permissionBus } from "./permission-bus";
 import {
   chatInputSchema,
   chatEventSchema,
+  getSessionInputSchema,
+  getSessionsInputSchema,
   permissionResponseSchema,
 } from "./schemas";
 import type { ChatEvent, PermissionResponse } from "./types";
-
-function findClaudeExecutable(): string {
-  const shell = process.env.SHELL || "/bin/zsh";
-
-  const response = execSync(`${shell} -lc "which claude" 2>/dev/null`, {
-    encoding: "utf-8",
-  });
-
-  return response.trim();
-}
 
 export const chat = os
   .input(chatInputSchema)
@@ -191,6 +182,18 @@ export const chat = os
     yield* drain();
 
     await sdkPromise;
+  });
+
+export const getSessions = os
+  .input(getSessionsInputSchema)
+  .handler(async ({ input }) => {
+    return readSessions(input.path);
+  });
+
+export const getSession = os
+  .input(getSessionInputSchema)
+  .handler(async ({ input }) => {
+    return readSession(input.path, input.sessionId);
   });
 
 export const respondToPermission = os

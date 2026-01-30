@@ -35,6 +35,15 @@ export const chatEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 
+export const getSessionsInputSchema = z.object({
+  path: z.string().min(1),
+});
+
+export const getSessionInputSchema = z.object({
+  path: z.string().min(1),
+  sessionId: z.string().min(1),
+});
+
 export const permissionResponseSchema = z.object({
   requestId: z.string(),
   decision: z.enum(["allow", "deny"]),
