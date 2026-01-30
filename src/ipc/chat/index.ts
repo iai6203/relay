@@ -5,7 +5,7 @@ import {
   deleteSession,
 } from "./handlers";
 
-export const chatHistory = {
+export const chat = {
   getSessions,
   getSession,
   saveSession,

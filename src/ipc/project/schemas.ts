@@ -1,5 +1,5 @@
 import z from "zod";
 
-export const removeRecentProjectInputSchema = z.object({
+export const removeProjectInputSchema = z.object({
   path: z.string(),
 });

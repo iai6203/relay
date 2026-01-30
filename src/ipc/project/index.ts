@@ -1,11 +1,7 @@
-import {
-  openProject,
-  getRecentProjects,
-  removeRecentProject,
-} from "./handlers";
+import { openProject, getProjects, removeProject } from "./handlers";
 
 export const project = {
   openProject,
-  getRecentProjects,
-  removeRecentProject,
+  getProjects,
+  removeProject,
 };

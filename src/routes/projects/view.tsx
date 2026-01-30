@@ -59,7 +59,7 @@ import type {
   ToolCallStatus,
   ChatMessage,
   ChatSession,
-} from "@/ipc/chat-history/types";
+} from "@/ipc/chat/types";
 
 function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
   switch (status) {
@@ -105,7 +105,7 @@ function ProjectViewPage() {
   currentSessionIdRef.current = currentSessionId;
 
   useEffect(() => {
-    ipc.client.chatHistory
+    ipc.client.chat
       .getSessions({ projectPath: path })
       .then((result) => setSessions(result as SessionMeta[]));
   }, [path]);
@@ -136,12 +136,12 @@ function ProjectViewPage() {
         setCurrentSessionId(session.id);
       }
 
-      await ipc.client.chatHistory.saveSession({
+      await ipc.client.chat.saveSession({
         projectPath: path,
         session,
       });
 
-      const updated = await ipc.client.chatHistory.getSessions({
+      const updated = await ipc.client.chat.getSessions({
         projectPath: path,
       });
       setSessions(updated as SessionMeta[]);
@@ -151,7 +151,7 @@ function ProjectViewPage() {
 
   const loadSession = useCallback(
     async (id: string) => {
-      const session = await ipc.client.chatHistory.getSession({
+      const session = await ipc.client.chat.getSession({
         projectPath: path,
         sessionId: id,
       });

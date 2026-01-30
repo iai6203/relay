@@ -3,19 +3,19 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ipc } from "@/ipc/manager";
-import type { RecentProject } from "@/store";
+import type { Project } from "@/store";
 
 function ProjectsPage() {
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    ipc.client.project.getRecentProjects().then(setRecentProjects);
+    ipc.client.project.getProjects().then(setProjects);
   }, []);
 
   const handleOpenProject = async () => {
     const result = await ipc.client.project.openProject();
     if (result) {
-      ipc.client.project.getRecentProjects().then(setRecentProjects);
+      ipc.client.project.getProjects().then(setProjects);
     }
   };
 
@@ -27,7 +27,7 @@ function ProjectsPage() {
           <Button onClick={handleOpenProject}>프로젝트 열기</Button>
         </div>
         <ul className="mt-4 space-y-2">
-          {recentProjects.map((project) => (
+          {projects.map((project) => (
             <li key={project.path}>
               <Link
                 to="/projects/view"
@@ -40,7 +40,7 @@ function ProjectsPage() {
             </li>
           ))}
         </ul>
-        {recentProjects.length === 0 && (
+        {projects.length === 0 && (
           <p className="text-muted-foreground mt-4">
             최근 프로젝트가 없습니다.
           </p>
