@@ -116,9 +116,7 @@ export const chat = os
             pathToClaudeCodeExecutable: findClaudeExecutable(),
             allowedTools: [
               "Read",
-              ...(input.autoApprove
-                ? ["Write", "Bash", "Edit"]
-                : []),
+              ...(input.autoApprove ? ["Write", "Bash", "Edit"] : []),
             ],
             canUseTool,
             ...(input.cwd ? { cwd: input.cwd } : {}),

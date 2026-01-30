@@ -530,7 +530,7 @@ function ProjectViewPage() {
                 />
                 <Label
                   htmlFor="auto-approve"
-                  className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground"
+                  className="text-muted-foreground flex cursor-pointer items-center gap-1 text-xs"
                 >
                   <ShieldCheckIcon className="size-3.5" />
                   Auto-approve
