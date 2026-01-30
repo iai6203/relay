@@ -24,7 +24,7 @@ export function PlaceholderLogo({
         {...props}
       />
       <span className="text-primary text-sm font-semibold text-nowrap">
-        Wedding
+        Unknown
       </span>
     </div>
   );

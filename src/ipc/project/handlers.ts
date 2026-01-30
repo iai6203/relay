@@ -5,7 +5,7 @@ import { dialog } from "electron";
 
 import { ipcContext } from "../context";
 import { store } from "@/store";
-import { removeRecentProjectInputSchema } from "./schemas";
+import { removeProjectInputSchema } from "./schemas";
 
 export const openProject = os
   .use(ipcContext.mainWindowContext)
@@ -23,26 +23,26 @@ export const openProject = os
 
     const projectPath = filePaths[0];
     const name = path.basename(projectPath);
-    const recentProjects = store.get("recentProjects");
+    const projects = store.get("projects");
 
-    const filtered = recentProjects.filter((p) => p.path !== projectPath);
+    const filtered = projects.filter((project) => project.path !== projectPath);
     filtered.unshift({ path: projectPath, name, lastOpened: Date.now() });
 
-    store.set("recentProjects", filtered);
+    store.set("projects", filtered);
 
     return { path: projectPath, name };
   });
 
-export const getRecentProjects = os.handler(() => {
-  return store.get("recentProjects");
+export const getProjects = os.handler(() => {
+  return store.get("projects");
 });
 
-export const removeRecentProject = os
-  .input(removeRecentProjectInputSchema)
+export const removeProject = os
+  .input(removeProjectInputSchema)
   .handler(({ input }) => {
-    const recentProjects = store.get("recentProjects");
+    const projects = store.get("projects");
     store.set(
-      "recentProjects",
-      recentProjects.filter((p) => p.path !== input.path),
+      "projects",
+      projects.filter((p) => p.path !== input.path),
     );
   });

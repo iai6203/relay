@@ -1,11 +1,11 @@
 import {
   openProject,
-  getRecentProjects,
-  removeRecentProject,
+  getProjects,
+  removeProject,
 } from "./handlers";
 
 export const project = {
   openProject,
-  getRecentProjects,
-  removeRecentProject,
+  getProjects,
+  removeProject,
 };
