@@ -2,7 +2,12 @@ import { useCallback, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ChatStatus } from "ai";
 import { z } from "zod";
-import { MessageCircleIcon, ShieldCheckIcon } from "lucide-react";
+import {
+  HistoryIcon,
+  MessageCircleIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 
 import type { ToolPart } from "@/components/ai-elements/tool";
 import {
@@ -44,6 +49,8 @@ import {
   ConfirmationActions,
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
+import { SessionList } from "@/components/ai/session-list";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ipc } from "@/ipc/manager";
@@ -75,6 +82,19 @@ function ProjectViewPage() {
   const [status, setStatus] = useState<ChatStatus>("ready");
   const [autoApprove, setAutoApprove] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  const loadSession = useCallback(
+    async (id: string) => {
+      setSessionId(id);
+      try {
+        const data = await ipc.client.ai.getSession({ path, sessionId: id });
+        setMessages(data);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [path],
+  );
 
   const handlePermissionResponse = useCallback(
     async (
@@ -263,6 +283,32 @@ function ProjectViewPage() {
 
   return (
     <div className="flex h-full flex-col pb-4">
+      {/* Header */}
+      <div className="flex justify-end gap-2 py-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={status !== "ready"}
+          onClick={() => {
+            setSessionId(undefined);
+            setMessages([]);
+          }}
+        >
+          <PlusIcon />
+          New Chat
+        </Button>
+        <SessionList
+          path={path}
+          variant="outline"
+          size="sm"
+          disabled={status !== "ready"}
+          onSelectSession={loadSession}
+        >
+          <HistoryIcon />
+          Sessions
+        </SessionList>
+      </div>
+
       <Conversation>
         <ConversationContent>
           {messages.length === 0 ? (
