@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ChatStatus } from "ai";
 import { z } from "zod";
-import { MessageCircleIcon, PlusIcon } from "lucide-react";
+import { MessageCircleIcon, PlusIcon, ShieldCheckIcon } from "lucide-react";
 
 import type { ToolPart } from "@/components/ai-elements/tool";
 import {
@@ -52,6 +52,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { ipc } from "@/ipc/manager";
 import type {
   ToolCallStatus,
@@ -91,6 +93,7 @@ function ProjectViewPage() {
 
   const [sessionId, setSessionId] = useState<string>();
   const [status, setStatus] = useState<ChatStatus>("ready");
+  const [autoApprove, setAutoApprove] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>();
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
@@ -231,6 +234,7 @@ function ProjectViewPage() {
           cwd: path,
           sessionId,
           prompt: message.text,
+          autoApprove,
         });
 
         for await (const event of stream) {
@@ -349,7 +353,7 @@ function ProjectViewPage() {
         saveCurrentSession(messagesRef.current, sessionIdRef.current);
       }
     },
-    [path, sessionId, saveCurrentSession],
+    [path, sessionId, autoApprove, saveCurrentSession],
   );
 
   return (
@@ -517,6 +521,21 @@ function ProjectViewPage() {
           <PromptInputTextarea placeholder="Message" />
           <PromptInputFooter>
             <PromptInputTools>
+              <div className="flex items-center gap-1.5">
+                <Switch
+                  id="auto-approve"
+                  size="sm"
+                  checked={autoApprove}
+                  onCheckedChange={setAutoApprove}
+                />
+                <Label
+                  htmlFor="auto-approve"
+                  className="text-muted-foreground flex cursor-pointer items-center gap-1 text-xs"
+                >
+                  <ShieldCheckIcon className="size-3.5" />
+                  Auto-approve
+                </Label>
+              </div>
               <PromptInputActionMenu>
                 <PromptInputActionMenuTrigger />
                 <PromptInputActionMenuContent>
