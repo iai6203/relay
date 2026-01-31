@@ -100,6 +100,30 @@ function parseSessionEntries(
     if (!msg) continue;
 
     if (entry.type === "user" && msg.role === "user") {
+      const contentBlocks = msg.content;
+
+      if (Array.isArray(contentBlocks)) {
+        for (const block of contentBlocks as Record<string, unknown>[]) {
+          if (block.type === "tool_result") {
+            const toolUseId = block.tool_use_id as string;
+            const output =
+              typeof block.content === "string" ? block.content : "";
+            const isError = block.is_error === true;
+
+            for (let i = messages.length - 1; i >= 0; i--) {
+              const target = messages[i].blocks.find(
+                (b) => b.type === "tool_call" && b.toolUseId === toolUseId,
+              );
+              if (target && target.type === "tool_call") {
+                target.output = output;
+                target.isError = isError;
+                break;
+              }
+            }
+          }
+        }
+      }
+
       const text = extractTextContent(msg.content);
       if (!text) continue;
 
