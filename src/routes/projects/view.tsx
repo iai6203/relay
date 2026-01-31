@@ -52,6 +52,7 @@ import {
 import { FileTree, type TreeItem } from "@/components/ai/file-tree";
 import { SessionList } from "@/components/ai/session-list";
 import { BashTool } from "@/components/ai/bash-tool";
+import { EditTool } from "@/components/ai/edit-tool";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -365,6 +366,40 @@ function ProjectViewPage() {
                                 );
                               }
 
+                              if (block.toolName === "Edit") {
+                                const permBlock = msg.blocks.find(
+                                  (b) =>
+                                    b.type === "permission_request" &&
+                                    b.toolUseId === block.toolUseId,
+                                );
+
+                                const permission =
+                                  permBlock?.type === "permission_request"
+                                    ? {
+                                        requestId: permBlock.requestId,
+                                        toolUseId: permBlock.toolUseId,
+                                        decisionReason:
+                                          permBlock.decisionReason,
+                                        decision: permBlock.decision,
+                                      }
+                                    : undefined;
+
+                                return (
+                                  <EditTool
+                                    key={block.toolUseId}
+                                    toolName={block.toolName}
+                                    state={mapStatusToToolState(block.status)}
+                                    input={block.input}
+                                    output={block.output}
+                                    isError={block.isError}
+                                    permission={permission}
+                                    onPermissionResponse={
+                                      handlePermissionResponse
+                                    }
+                                  />
+                                );
+                              }
+
                               return (
                                 <Tool key={block.toolUseId}>
                                   <ToolHeader
@@ -391,6 +426,9 @@ function ProjectViewPage() {
                             }
 
                             if (block.type === "permission_request") {
+                              if (block.toolName === "Edit") {
+                                return null;
+                              }
                               const permState =
                                 block.decision == null
                                   ? "approval-requested"
