@@ -97,7 +97,7 @@ export function BashTool({
       {/* Output - 접었다 폈다 */}
       {hasOutput && (
         <Collapsible>
-          <CollapsibleTrigger className="group flex w-full items-center justify-between border-t px-3 py-2 hover:bg-muted/50">
+          <CollapsibleTrigger className="group hover:bg-muted/50 flex w-full items-center justify-between border-t px-3 py-2">
             <span
               className={cn(
                 "text-xs font-medium",
@@ -115,7 +115,7 @@ export function BashTool({
                 isError ? "bg-destructive/10" : "bg-muted/20",
               )}
             >
-              <pre className="p-3 text-xs whitespace-pre-wrap break-all">
+              <pre className="p-3 text-xs break-all whitespace-pre-wrap">
                 {output}
               </pre>
             </div>
