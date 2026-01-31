@@ -50,6 +50,7 @@ import {
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
 import { SessionList } from "@/components/ai/session-list";
+import { BashTool } from "@/components/ai/bash-tool";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -335,6 +336,19 @@ function ProjectViewPage() {
                         }
 
                         if (block.type === "tool_call") {
+                          if (block.toolName === "Bash") {
+                            return (
+                              <BashTool
+                                key={block.toolUseId}
+                                toolName={block.toolName}
+                                state={mapStatusToToolState(block.status)}
+                                input={block.input}
+                                output={block.output}
+                                isError={block.isError}
+                              />
+                            );
+                          }
+
                           return (
                             <Tool key={block.toolUseId}>
                               <ToolHeader
