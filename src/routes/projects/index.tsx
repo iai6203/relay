@@ -21,7 +21,7 @@ function ProjectsPage() {
 
   return (
     <>
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col p-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">프로젝트</h1>
           <Button onClick={handleOpenProject}>프로젝트 열기</Button>
