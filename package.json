@@ -50,6 +50,7 @@
     "electron-store": "^11.0.2",
     "embla-carousel-react": "^8.6.0",
     "i18next": "^25.7.4",
+    "ignore": "^7.0.5",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.562.0",
     "media-chrome": "^4.17.2",

@@ -34,12 +34,12 @@ export function Navigation() {
   return (
     // To make this a sticky navigation, you can add `sticky top-0 z-50` classes to the parent div
     <div
-      className="bg-background w-full py-3.5 transition-all ease-in-out"
+      className="bg-background w-full border-b py-3.5 transition-all ease-in-out"
       role="navigation"
       aria-label="Website top navigation"
       ref={navigationContainerRef}
     >
-      <div className="relative mx-auto flex max-w-7xl flex-col justify-between gap-x-5 px-5 md:flex-row lg:gap-x-9 lg:px-8">
+      <div className="relative flex flex-col justify-between gap-x-5 px-4 md:flex-row lg:gap-x-9">
         {/* Logo and Toggle Mobile Nav Button */}
         <div className="flex items-center justify-between">
           {/* Replace with actual logo */}
