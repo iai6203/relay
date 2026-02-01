@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { ipc } from "@/ipc/manager";
 
@@ -50,24 +51,26 @@ export function SessionList({
         {sessions.length === 0 ? (
           <p className="text-muted-foreground text-xs">No sessions found.</p>
         ) : (
-          <Table>
-            <TableBody>
-              {sessions.map((session) => (
-                <TableRow
-                  key={session.sessionId}
-                  className="cursor-pointer"
-                  onClick={() => {
-                    onSelectSession?.(session.sessionId);
-                    setOpen(false);
-                  }}
-                >
-                  <TableCell className="max-w-0 truncate text-xs">
-                    {session.firstMessage ?? "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ScrollArea className="max-h-80">
+            <Table>
+              <TableBody>
+                {sessions.map((session) => (
+                  <TableRow
+                    key={session.sessionId}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      onSelectSession?.(session.sessionId);
+                      setOpen(false);
+                    }}
+                  >
+                    <TableCell className="max-w-0 truncate text-xs">
+                      {session.firstMessage ?? "-"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         )}
       </DialogContent>
     </Dialog>
