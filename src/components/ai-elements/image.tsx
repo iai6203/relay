@@ -1,7 +1,9 @@
 import { cn } from "@/utils/tailwind";
-import type { Experimental_GeneratedImage } from "ai";
 
-export type ImageProps = Experimental_GeneratedImage & {
+export type ImageProps = {
+  base64: string;
+  mediaType: string;
+  uint8Array?: Uint8Array;
   className?: string;
   alt?: string;
 };

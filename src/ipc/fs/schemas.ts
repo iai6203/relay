@@ -7,3 +7,7 @@ export const getFileTreeInputSchema = z.object({
 export const readFileInputSchema = z.object({
   filePath: z.string().min(1),
 });
+
+export const readFileAsBase64InputSchema = z.object({
+  filePath: z.string().min(1),
+});
