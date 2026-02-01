@@ -1,5 +1,6 @@
 import type { BundledLanguage } from "shiki";
-import { FileIcon } from "lucide-react";
+import { CheckIcon, FileIcon } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   CodeBlock,
@@ -7,6 +8,7 @@ import {
   CodeBlockHeader,
   CodeBlockTitle,
 } from "@/components/ai-elements/code-block";
+import { Button } from "@/components/ui/button";
 
 const EXT_TO_LANGUAGE: Record<string, BundledLanguage> = {
   ts: "typescript",
@@ -55,29 +57,146 @@ function getLanguageFromPath(filePath: string): BundledLanguage {
   return EXT_TO_LANGUAGE[ext] ?? "text";
 }
 
+export interface CodeSelection {
+  filePath: string;
+  startLine: number;
+  endLine: number;
+  selectedText: string;
+}
+
+interface PendingSelection extends CodeSelection {
+  top: number;
+  left: number;
+}
+
 interface CodeViewerProps {
   filePath: string;
   content: string;
+  onSelectionChange?: (selection: CodeSelection | null) => void;
 }
 
-export function CodeViewer({ filePath, content }: CodeViewerProps) {
+export function CodeViewer({
+  filePath,
+  content,
+  onSelectionChange,
+}: CodeViewerProps) {
   const language = getLanguageFromPath(filePath);
   const fileName = filePath.split("/").pop() ?? filePath;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [pendingSelection, setPendingSelection] =
+    useState<PendingSelection | null>(null);
+
+  const handleMouseUp = useCallback(() => {
+    if (!onSelectionChange) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || !selection.rangeCount) {
+      setPendingSelection(null);
+      return;
+    }
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) {
+      setPendingSelection(null);
+      return;
+    }
+
+    // Find the line numbers from the selection
+    const range = selection.getRangeAt(0);
+    const container = containerRef.current;
+    if (!container || !container.contains(range.commonAncestorContainer)) {
+      return;
+    }
+
+    // Get all line spans (they have CSS counter for line numbers)
+    const codeElement = container.querySelector("code");
+    if (!codeElement) return;
+
+    const lineSpans = Array.from(codeElement.children) as HTMLElement[];
+    let startLine = 1;
+    let endLine = 1;
+
+    for (let i = 0; i < lineSpans.length; i++) {
+      const span = lineSpans[i];
+      if (
+        span.contains(range.startContainer) ||
+        span === range.startContainer
+      ) {
+        startLine = i + 1;
+      }
+      if (span.contains(range.endContainer) || span === range.endContainer) {
+        endLine = i + 1;
+        break;
+      }
+    }
+
+    // Calculate position for floating button
+    const rangeRect = range.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    setPendingSelection({
+      filePath,
+      startLine,
+      endLine,
+      selectedText,
+      top: rangeRect.top - containerRect.top - 32, // 32px above selection
+      left: rangeRect.left - containerRect.left + rangeRect.width / 2,
+    });
+  }, [filePath, onSelectionChange]);
+
+  const handleConfirm = useCallback(() => {
+    if (pendingSelection && onSelectionChange) {
+      onSelectionChange(pendingSelection);
+      setPendingSelection(null);
+      window.getSelection()?.removeAllRanges();
+    }
+  }, [pendingSelection, onSelectionChange]);
 
   return (
-    <CodeBlock
-      code={content}
-      language={language}
-      showLineNumbers
-      className="flex h-full flex-col rounded-none border-0"
+    <div
+      ref={containerRef}
+      onMouseUp={handleMouseUp}
+      className="relative h-full"
     >
-      <CodeBlockHeader>
-        <CodeBlockTitle>
-          <FileIcon size={14} />
-          <CodeBlockFilename>{fileName}</CodeBlockFilename>
-          <span className="text-muted-foreground/60">{filePath}</span>
-        </CodeBlockTitle>
-      </CodeBlockHeader>
-    </CodeBlock>
+      <CodeBlock
+        code={content}
+        language={language}
+        showLineNumbers
+        className="flex h-full flex-col rounded-none border-0"
+      >
+        <CodeBlockHeader>
+          <CodeBlockTitle>
+            <FileIcon size={14} />
+            <CodeBlockFilename>{fileName}</CodeBlockFilename>
+            <span className="text-muted-foreground/60">{filePath}</span>
+          </CodeBlockTitle>
+        </CodeBlockHeader>
+      </CodeBlock>
+
+      {/* Floating confirmation button */}
+      {pendingSelection && (
+        <div
+          className="absolute z-50 -translate-x-1/2"
+          style={{
+            top: pendingSelection.top,
+            left: pendingSelection.left,
+          }}
+        >
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={handleConfirm}
+            className="shadow-md"
+          >
+            <CheckIcon size={12} />
+            <span className="font-mono text-xs">
+              {pendingSelection.startLine === pendingSelection.endLine
+                ? `Line ${pendingSelection.startLine}`
+                : `Lines ${pendingSelection.startLine}-${pendingSelection.endLine}`}
+            </span>
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
