@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ChatStatus } from "ai";
 import { z } from "zod";
@@ -97,9 +97,37 @@ function ProjectViewPage() {
   const [fileContent, setFileContent] = useState<string>();
   const [imageData, setImageData] = useState<ImageData>();
 
+  const selectedFileRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    ipc.client.fs.getFileTree({ path }).then(setTree).catch(console.error);
+    selectedFileRef.current = selectedFile;
+  }, [selectedFile]);
+
+  const refreshTree = useCallback(async () => {
+    try {
+      const newTree = await ipc.client.fs.getFileTree({ path });
+      setTree(newTree);
+    } catch (error) {
+      console.error(error);
+    }
   }, [path]);
+
+  const refreshSelectedFile = useCallback(async () => {
+    const current = selectedFileRef.current;
+    if (!current) return;
+    try {
+      const content = await ipc.client.fs.readFile({
+        filePath: `${path}/${current}`,
+      });
+      setFileContent(content);
+    } catch (error) {
+      console.error(error);
+      setFileContent(undefined);
+    }
+  }, [path]);
+
+  useEffect(() => {
+    refreshTree();
+  }, [refreshTree]);
 
   const handleSelectFile = useCallback(
     async (relativePath: string) => {
@@ -303,6 +331,8 @@ function ProjectViewPage() {
                   };
                 }),
               );
+              refreshTree();
+              refreshSelectedFile();
               break;
 
             case "result":
@@ -322,7 +352,7 @@ function ProjectViewPage() {
         setStatus("ready");
       }
     },
-    [path, sessionId, autoApprove],
+    [path, sessionId, autoApprove, refreshTree, refreshSelectedFile],
   );
 
   return (
