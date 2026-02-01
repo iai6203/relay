@@ -69,7 +69,7 @@ export function CodeViewer({ filePath, content }: CodeViewerProps) {
       code={content}
       language={language}
       showLineNumbers
-      className="flex h-full flex-col"
+      className="flex h-full flex-col rounded-none border-0"
     >
       <CodeBlockHeader>
         <CodeBlockTitle>
