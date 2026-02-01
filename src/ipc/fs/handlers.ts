@@ -6,7 +6,11 @@ import ignore, { type Ignore } from "ignore";
 
 import type { TreeItem } from "@/components/ai/file-tree";
 
-import { getFileTreeInputSchema, readFileInputSchema } from "./schemas";
+import {
+  getFileTreeInputSchema,
+  readFileInputSchema,
+  readFileAsBase64InputSchema,
+} from "./schemas";
 
 async function addGitignore(ig: Ignore, dirPath: string): Promise<Ignore> {
   try {
@@ -73,4 +77,11 @@ export const readFile = os
   .handler(async ({ input }) => {
     const content = await fs.readFile(input.filePath, "utf-8");
     return content;
+  });
+
+export const readFileAsBase64 = os
+  .input(readFileAsBase64InputSchema)
+  .handler(async ({ input }) => {
+    const buffer = await fs.readFile(input.filePath);
+    return buffer.toString("base64");
   });

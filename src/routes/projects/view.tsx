@@ -59,6 +59,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ipc } from "@/ipc/manager";
 import type { ToolCallStatus, ChatMessage } from "@/ipc/chat/types";
+import {
+  getMediaType,
+  type ImageData,
+  ImageViewer,
+  isImageFile,
+} from "@/components/ai/image-viewer";
 
 function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
   switch (status) {
@@ -89,6 +95,7 @@ function ProjectViewPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedFile, setSelectedFile] = useState<string>();
   const [fileContent, setFileContent] = useState<string>();
+  const [imageData, setImageData] = useState<ImageData>();
 
   useEffect(() => {
     ipc.client.fs.getFileTree({ path }).then(setTree).catch(console.error);
@@ -97,14 +104,24 @@ function ProjectViewPage() {
   const handleSelectFile = useCallback(
     async (relativePath: string) => {
       setSelectedFile(relativePath);
+      setFileContent(undefined);
+      setImageData(undefined);
+
+      const filePath = `${path}/${relativePath}`;
+
       try {
-        const content = await ipc.client.fs.readFile({
-          filePath: `${path}/${relativePath}`,
-        });
-        setFileContent(content);
+        if (isImageFile(relativePath)) {
+          const base64 = await ipc.client.fs.readFileAsBase64({ filePath });
+          setImageData({
+            base64,
+            mediaType: getMediaType(relativePath),
+          });
+        } else {
+          const content = await ipc.client.fs.readFile({ filePath });
+          setFileContent(content);
+        }
       } catch (error) {
         console.error(error);
-        setFileContent(undefined);
       }
     },
     [path],
@@ -319,9 +336,13 @@ function ProjectViewPage() {
         />
       </div>
 
-      {/* CodeViewer */}
+      {/* CodeViewer / ImageViewer */}
       <div className="min-h-0 overflow-hidden">
-        {selectedFile && fileContent != null ? (
+        {selectedFile && imageData ? (
+          <div className="flex h-full items-center justify-center overflow-auto">
+            <ImageViewer imageData={imageData} selectedFile={selectedFile} />
+          </div>
+        ) : selectedFile && fileContent != null ? (
           <CodeViewer filePath={selectedFile} content={fileContent} />
         ) : (
           <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
