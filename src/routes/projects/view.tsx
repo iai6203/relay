@@ -50,15 +50,11 @@ import {
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
 import { FileTree, type TreeItem } from "@/components/ai/file-tree";
+import { CodeViewer } from "@/components/ai/code-viewer";
 import { SessionList } from "@/components/ai/session-list";
 import { BashTool } from "@/components/ai/bash-tool";
 import { EditTool } from "@/components/ai/edit-tool";
 import { Button } from "@/components/ui/button";
-import {
-  Sidebar,
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ipc } from "@/ipc/manager";
@@ -91,10 +87,28 @@ function ProjectViewPage() {
   const [status, setStatus] = useState<ChatStatus>("ready");
   const [autoApprove, setAutoApprove] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string>();
+  const [fileContent, setFileContent] = useState<string>();
 
   useEffect(() => {
     ipc.client.fs.getFileTree({ path }).then(setTree).catch(console.error);
   }, [path]);
+
+  const handleSelectFile = useCallback(
+    async (relativePath: string) => {
+      setSelectedFile(relativePath);
+      try {
+        const content = await ipc.client.fs.readFile({
+          filePath: `${path}/${relativePath}`,
+        });
+        setFileContent(content);
+      } catch (error) {
+        console.error(error);
+        setFileContent(undefined);
+      }
+    },
+    [path],
+  );
 
   const loadSession = useCallback(
     async (id: string) => {
@@ -295,256 +309,269 @@ function ProjectViewPage() {
   );
 
   return (
-    <SidebarProvider className="relative h-full min-h-0 gap-4 overflow-hidden">
-      <Sidebar className="absolute h-full [&_[data-slot=sidebar-inner]]:bg-transparent">
-        <FileTree tree={tree} />
-      </Sidebar>
-      <SidebarInset>
-        <div className="flex h-full flex-1 flex-col py-2 pr-4">
-          {/* Header */}
-          <div className="flex justify-end gap-2 py-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={status !== "ready"}
-              onClick={() => {
-                setSessionId(undefined);
-                setMessages([]);
-              }}
-            >
-              <PlusIcon />
-              New Chat
-            </Button>
-            <SessionList
-              path={path}
-              variant="outline"
-              size="sm"
-              disabled={status !== "ready"}
-              onSelectSession={loadSession}
-            >
-              <HistoryIcon />
-              Sessions
-            </SessionList>
+    <div className="grid h-full min-h-0 w-full grid-cols-[1fr_3fr_2fr] overflow-hidden">
+      {/* FileTree */}
+      <div className="h-full overflow-auto border-r">
+        <FileTree
+          tree={tree}
+          selectedPath={selectedFile}
+          onSelectFile={handleSelectFile}
+        />
+      </div>
+
+      {/* CodeViewer */}
+      <div className="min-h-0 overflow-hidden p-2">
+        {selectedFile && fileContent != null ? (
+          <CodeViewer filePath={selectedFile} content={fileContent} />
+        ) : (
+          <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+            Select a file to view
           </div>
+        )}
+      </div>
 
-          <Conversation>
-            <ConversationContent>
-              {messages.length === 0 ? (
-                <ConversationEmptyState
-                  icon={<MessageCircleIcon className="size-8" />}
-                  title="No messages yet"
-                  description="Type a message below to start a conversation."
-                />
-              ) : (
-                messages.map((msg) => (
-                  <Message key={msg.id} from={msg.role}>
-                    <MessageContent>
-                      {msg.role === "user" ? (
-                        msg.content
-                      ) : (
-                        <>
-                          {msg.blocks.map((block, i) => {
-                            if (block.type === "text") {
-                              return (
-                                <MessageResponse key={i}>
-                                  {block.text}
-                                </MessageResponse>
-                              );
-                            }
-
-                            if (block.type === "tool_call") {
-                              if (block.toolName === "Bash") {
-                                return (
-                                  <BashTool
-                                    key={block.toolUseId}
-                                    toolName={block.toolName}
-                                    state={mapStatusToToolState(block.status)}
-                                    input={block.input}
-                                    output={block.output}
-                                    isError={block.isError}
-                                  />
-                                );
-                              }
-
-                              if (block.toolName === "Edit") {
-                                const permBlock = msg.blocks.find(
-                                  (b) =>
-                                    b.type === "permission_request" &&
-                                    b.toolUseId === block.toolUseId,
-                                );
-
-                                const permission =
-                                  permBlock?.type === "permission_request"
-                                    ? {
-                                        requestId: permBlock.requestId,
-                                        toolUseId: permBlock.toolUseId,
-                                        decisionReason:
-                                          permBlock.decisionReason,
-                                        decision: permBlock.decision,
-                                      }
-                                    : undefined;
-
-                                return (
-                                  <EditTool
-                                    key={block.toolUseId}
-                                    toolName={block.toolName}
-                                    state={mapStatusToToolState(block.status)}
-                                    input={block.input}
-                                    output={block.output}
-                                    isError={block.isError}
-                                    permission={permission}
-                                    onPermissionResponse={
-                                      handlePermissionResponse
-                                    }
-                                  />
-                                );
-                              }
-
-                              return (
-                                <Tool key={block.toolUseId}>
-                                  <ToolHeader
-                                    title={block.toolName}
-                                    type="dynamic-tool"
-                                    state={mapStatusToToolState(block.status)}
-                                    toolName={block.toolName}
-                                  />
-                                  <ToolContent>
-                                    <ToolInput input={block.input} />
-                                    {block.output != null && (
-                                      <ToolOutput
-                                        output={block.output}
-                                        errorText={
-                                          block.isError
-                                            ? block.output
-                                            : undefined
-                                        }
-                                      />
-                                    )}
-                                  </ToolContent>
-                                </Tool>
-                              );
-                            }
-
-                            if (block.type === "permission_request") {
-                              if (block.toolName === "Edit") {
-                                return null;
-                              }
-                              const permState =
-                                block.decision == null
-                                  ? "approval-requested"
-                                  : "approval-responded";
-
-                              const approval =
-                                block.decision == null
-                                  ? { id: block.requestId }
-                                  : {
-                                      id: block.requestId,
-                                      approved: block.decision === "allow",
-                                    };
-
-                              return (
-                                <Confirmation
-                                  key={block.requestId}
-                                  approval={approval}
-                                  state={permState as ToolPart["state"]}
-                                >
-                                  <ConfirmationTitle>
-                                    <span className="font-semibold">
-                                      {block.toolName}
-                                    </span>
-                                    {block.decisionReason &&
-                                      ` — ${block.decisionReason}`}
-                                  </ConfirmationTitle>
-
-                                  <ConfirmationRequest>
-                                    <ToolInput input={block.input} />
-                                    <ConfirmationActions>
-                                      <ConfirmationAction
-                                        variant="outline"
-                                        onClick={() =>
-                                          handlePermissionResponse(
-                                            block.requestId,
-                                            block.toolUseId,
-                                            "deny",
-                                            "User denied permission",
-                                          )
-                                        }
-                                      >
-                                        Deny
-                                      </ConfirmationAction>
-                                      <ConfirmationAction
-                                        onClick={() =>
-                                          handlePermissionResponse(
-                                            block.requestId,
-                                            block.toolUseId,
-                                            "allow",
-                                          )
-                                        }
-                                      >
-                                        Allow
-                                      </ConfirmationAction>
-                                    </ConfirmationActions>
-                                  </ConfirmationRequest>
-
-                                  <ConfirmationAccepted>
-                                    <span className="text-green-600">
-                                      Approved
-                                    </span>
-                                  </ConfirmationAccepted>
-
-                                  <ConfirmationRejected>
-                                    <span className="text-red-600">Denied</span>
-                                  </ConfirmationRejected>
-                                </Confirmation>
-                              );
-                            }
-
-                            return null;
-                          })}
-                        </>
-                      )}
-                    </MessageContent>
-                  </Message>
-                ))
-              )}
-            </ConversationContent>
-            <ConversationScrollButton />
-          </Conversation>
-
-          <div className="mx-auto w-full">
-            <PromptInput onSubmit={handleSubmit}>
-              <PromptInputTextarea placeholder="Message" />
-              <PromptInputFooter>
-                <PromptInputTools>
-                  <div className="flex items-center gap-1.5">
-                    <Switch
-                      id="auto-approve"
-                      size="sm"
-                      checked={autoApprove}
-                      onCheckedChange={setAutoApprove}
-                    />
-                    <Label
-                      htmlFor="auto-approve"
-                      className="text-muted-foreground flex cursor-pointer items-center gap-1 text-xs"
-                    >
-                      <ShieldCheckIcon className="size-3.5" />
-                      Auto-approve
-                    </Label>
-                  </div>
-                  <PromptInputActionMenu>
-                    <PromptInputActionMenuTrigger />
-                    <PromptInputActionMenuContent>
-                      <PromptInputActionAddAttachments />
-                    </PromptInputActionMenuContent>
-                  </PromptInputActionMenu>
-                </PromptInputTools>
-                <PromptInputSubmit status={status} />
-              </PromptInputFooter>
-            </PromptInput>
-          </div>
+      {/* ChatUI */}
+      <div className="flex min-h-0 flex-col border-l py-2 pr-4 pl-4">
+        {/* Header */}
+        <div className="flex justify-end gap-2 py-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={status !== "ready"}
+            onClick={() => {
+              setSessionId(undefined);
+              setMessages([]);
+            }}
+          >
+            <PlusIcon />
+            New Chat
+          </Button>
+          <SessionList
+            path={path}
+            variant="outline"
+            size="sm"
+            disabled={status !== "ready"}
+            onSelectSession={loadSession}
+          >
+            <HistoryIcon />
+            Sessions
+          </SessionList>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+
+        <Conversation>
+          <ConversationContent>
+            {messages.length === 0 ? (
+              <ConversationEmptyState
+                icon={<MessageCircleIcon className="size-8" />}
+                title="No messages yet"
+                description="Type a message below to start a conversation."
+              />
+            ) : (
+              messages.map((msg) => (
+                <Message key={msg.id} from={msg.role}>
+                  <MessageContent>
+                    {msg.role === "user" ? (
+                      msg.content
+                    ) : (
+                      <>
+                        {msg.blocks.map((block, i) => {
+                          if (block.type === "text") {
+                            return (
+                              <MessageResponse key={i}>
+                                {block.text}
+                              </MessageResponse>
+                            );
+                          }
+
+                          if (block.type === "tool_call") {
+                            if (block.toolName === "Bash") {
+                              return (
+                                <BashTool
+                                  key={block.toolUseId}
+                                  toolName={block.toolName}
+                                  state={mapStatusToToolState(block.status)}
+                                  input={block.input}
+                                  output={block.output}
+                                  isError={block.isError}
+                                />
+                              );
+                            }
+
+                            if (block.toolName === "Edit") {
+                              const permBlock = msg.blocks.find(
+                                (b) =>
+                                  b.type === "permission_request" &&
+                                  b.toolUseId === block.toolUseId,
+                              );
+
+                              const permission =
+                                permBlock?.type === "permission_request"
+                                  ? {
+                                      requestId: permBlock.requestId,
+                                      toolUseId: permBlock.toolUseId,
+                                      decisionReason: permBlock.decisionReason,
+                                      decision: permBlock.decision,
+                                    }
+                                  : undefined;
+
+                              return (
+                                <EditTool
+                                  key={block.toolUseId}
+                                  toolName={block.toolName}
+                                  state={mapStatusToToolState(block.status)}
+                                  input={block.input}
+                                  output={block.output}
+                                  isError={block.isError}
+                                  permission={permission}
+                                  onPermissionResponse={
+                                    handlePermissionResponse
+                                  }
+                                />
+                              );
+                            }
+
+                            return (
+                              <Tool key={block.toolUseId}>
+                                <ToolHeader
+                                  title={block.toolName}
+                                  type="dynamic-tool"
+                                  state={mapStatusToToolState(block.status)}
+                                  toolName={block.toolName}
+                                />
+                                <ToolContent>
+                                  <ToolInput input={block.input} />
+                                  {block.output != null && (
+                                    <ToolOutput
+                                      output={block.output}
+                                      errorText={
+                                        block.isError ? block.output : undefined
+                                      }
+                                    />
+                                  )}
+                                </ToolContent>
+                              </Tool>
+                            );
+                          }
+
+                          if (block.type === "permission_request") {
+                            if (block.toolName === "Edit") {
+                              return null;
+                            }
+                            const permState =
+                              block.decision == null
+                                ? "approval-requested"
+                                : "approval-responded";
+
+                            const approval =
+                              block.decision == null
+                                ? { id: block.requestId }
+                                : {
+                                    id: block.requestId,
+                                    approved: block.decision === "allow",
+                                  };
+
+                            return (
+                              <Confirmation
+                                key={block.requestId}
+                                approval={approval}
+                                state={permState as ToolPart["state"]}
+                              >
+                                <ConfirmationTitle>
+                                  <span className="font-semibold">
+                                    {block.toolName}
+                                  </span>
+                                  {block.decisionReason &&
+                                    ` — ${block.decisionReason}`}
+                                </ConfirmationTitle>
+
+                                <ConfirmationRequest>
+                                  <ToolInput input={block.input} />
+                                  <ConfirmationActions>
+                                    <ConfirmationAction
+                                      variant="outline"
+                                      onClick={() =>
+                                        handlePermissionResponse(
+                                          block.requestId,
+                                          block.toolUseId,
+                                          "deny",
+                                          "User denied permission",
+                                        )
+                                      }
+                                    >
+                                      Deny
+                                    </ConfirmationAction>
+                                    <ConfirmationAction
+                                      onClick={() =>
+                                        handlePermissionResponse(
+                                          block.requestId,
+                                          block.toolUseId,
+                                          "allow",
+                                        )
+                                      }
+                                    >
+                                      Allow
+                                    </ConfirmationAction>
+                                  </ConfirmationActions>
+                                </ConfirmationRequest>
+
+                                <ConfirmationAccepted>
+                                  <span className="text-green-600">
+                                    Approved
+                                  </span>
+                                </ConfirmationAccepted>
+
+                                <ConfirmationRejected>
+                                  <span className="text-red-600">Denied</span>
+                                </ConfirmationRejected>
+                              </Confirmation>
+                            );
+                          }
+
+                          return null;
+                        })}
+                      </>
+                    )}
+                  </MessageContent>
+                </Message>
+              ))
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+
+        <div className="mx-auto w-full">
+          <PromptInput onSubmit={handleSubmit}>
+            <PromptInputTextarea placeholder="Message" />
+            <PromptInputFooter>
+              <PromptInputTools>
+                <div className="flex items-center gap-1.5">
+                  <Switch
+                    id="auto-approve"
+                    size="sm"
+                    checked={autoApprove}
+                    onCheckedChange={setAutoApprove}
+                  />
+                  <Label
+                    htmlFor="auto-approve"
+                    className="text-muted-foreground flex cursor-pointer items-center gap-1 text-xs"
+                  >
+                    <ShieldCheckIcon className="size-3.5" />
+                    Auto-approve
+                  </Label>
+                </div>
+                <PromptInputActionMenu>
+                  <PromptInputActionMenuTrigger />
+                  <PromptInputActionMenuContent>
+                    <PromptInputActionAddAttachments />
+                  </PromptInputActionMenuContent>
+                </PromptInputActionMenu>
+              </PromptInputTools>
+              <PromptInputSubmit status={status} />
+            </PromptInputFooter>
+          </PromptInput>
+        </div>
+      </div>
+    </div>
   );
 }
 

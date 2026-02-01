@@ -1,97 +1,53 @@
-import { ChevronRight, File, Folder } from "lucide-react";
-
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-} from "@/components/ui/sidebar";
+  FileTree as FileTreeRoot,
+  FileTreeFile,
+  FileTreeFolder,
+  type FileTreeProps as FileTreeRootProps,
+} from "@/components/ai-elements/file-tree";
 
-export type TreeItem = string | TreeItem[];
+export interface TreeItem {
+  name: string;
+  children?: TreeItem[];
+}
 
 interface FileTreeProps {
   tree: TreeItem[];
-  label?: string;
-  defaultOpenFolders?: string[];
+  selectedPath?: string;
+  onSelectFile?: (relativePath: string) => void;
 }
 
-export function FileTree({
-  tree,
-  label = "Files",
-  defaultOpenFolders = [],
-}: FileTreeProps) {
+export function FileTree({ tree, selectedPath, onSelectFile }: FileTreeProps) {
   return (
-    <SidebarContent>
-      <SidebarGroup>
-        <SidebarGroupLabel>{label}</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {tree.map((item, index) => (
-              <Tree
-                key={index}
-                item={item}
-                defaultOpenFolders={defaultOpenFolders}
-              />
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-    </SidebarContent>
+    <FileTreeRoot
+      selectedPath={selectedPath}
+      className="h-full border-none"
+      onSelect={onSelectFile as FileTreeRootProps["onSelect"]}
+    >
+      {tree.map((item) => (
+        <TreeNode key={item.name} item={item} parentPath="" />
+      ))}
+    </FileTreeRoot>
   );
 }
 
-function Tree({
+function TreeNode({
   item,
-  defaultOpenFolders,
+  parentPath,
 }: {
   item: TreeItem;
-  defaultOpenFolders: string[];
+  parentPath: string;
 }) {
-  const [name, ...items] = Array.isArray(item) ? item : [item];
+  const currentPath = parentPath ? `${parentPath}/${item.name}` : item.name;
 
-  if (!items.length) {
-    return (
-      <SidebarMenuButton>
-        <File />
-        {name as string}
-      </SidebarMenuButton>
-    );
+  if (!item.children) {
+    return <FileTreeFile path={currentPath} name={item.name} />;
   }
 
   return (
-    <SidebarMenuItem>
-      <Collapsible
-        className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
-        defaultOpen={defaultOpenFolders.includes(name as string)}
-      >
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton>
-            <ChevronRight className="transition-transform" />
-            <Folder />
-            {name as string}
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {items.map((subItem, index) => (
-              <Tree
-                key={index}
-                item={subItem as TreeItem}
-                defaultOpenFolders={defaultOpenFolders}
-              />
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </Collapsible>
-    </SidebarMenuItem>
+    <FileTreeFolder path={currentPath} name={item.name}>
+      {item.children.map((child) => (
+        <TreeNode key={child.name} item={child} parentPath={currentPath} />
+      ))}
+    </FileTreeFolder>
   );
 }

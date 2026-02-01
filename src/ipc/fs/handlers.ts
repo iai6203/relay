@@ -6,7 +6,7 @@ import ignore, { type Ignore } from "ignore";
 
 import type { TreeItem } from "@/components/ai/file-tree";
 
-import { getFileTreeInputSchema } from "./schemas";
+import { getFileTreeInputSchema, readFileInputSchema } from "./schemas";
 
 async function addGitignore(ig: Ignore, dirPath: string): Promise<Ignore> {
   try {
@@ -53,9 +53,9 @@ async function getTreeItems(
         rootPath,
         ig,
       );
-      items.push([entry.name, ...children]);
+      items.push({ name: entry.name, children });
     } else {
-      items.push(entry.name);
+      items.push({ name: entry.name });
     }
   }
 
@@ -66,4 +66,11 @@ export const getFileTree = os
   .input(getFileTreeInputSchema)
   .handler(async ({ input }) => {
     return getTreeItems(input.path, input.path, ignore());
+  });
+
+export const readFile = os
+  .input(readFileInputSchema)
+  .handler(async ({ input }) => {
+    const content = await fs.readFile(input.filePath, "utf-8");
+    return content;
   });
