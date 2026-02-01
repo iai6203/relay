@@ -320,7 +320,7 @@ function ProjectViewPage() {
       </div>
 
       {/* CodeViewer */}
-      <div className="min-h-0 overflow-hidden p-2">
+      <div className="min-h-0 overflow-hidden">
         {selectedFile && fileContent != null ? (
           <CodeViewer filePath={selectedFile} content={fileContent} />
         ) : (
