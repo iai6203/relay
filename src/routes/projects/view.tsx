@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ChatStatus } from "ai";
 import { z } from "zod";
@@ -52,11 +52,12 @@ import {
   ConfirmationActions,
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
-import { FileTree, type TreeItem } from "@/components/ai/file-tree";
+import { FileTree } from "@/components/ai/file-tree";
 import { CodeViewer, type CodeSelection } from "@/components/ai/code-viewer";
 import { SessionList } from "@/components/ai/session-list";
 import { BashTool } from "@/components/ai/bash-tool";
 import { EditTool } from "@/components/ai/edit-tool";
+import { useFileExplorer } from "@/hooks/use-file-explorer";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -67,12 +68,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ipc } from "@/ipc/manager";
 import type { ToolCallStatus, ChatMessage } from "@/ipc/chat/types";
-import {
-  getMediaType,
-  type ImageData,
-  ImageViewer,
-  isImageFile,
-} from "@/components/ai/image-viewer";
+import { ImageViewer } from "@/components/ai/image-viewer";
 import { Badge } from "@/components/ui/badge";
 
 function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
@@ -97,73 +93,21 @@ const searchSchema = z.object({
 function ProjectViewPage() {
   const { path } = Route.useSearch();
 
-  const [tree, setTree] = useState<TreeItem[]>([]);
+  const {
+    tree,
+    selectedFile,
+    fileContent,
+    imageData,
+    refreshTree,
+    refreshSelectedFile,
+    handleSelectFile,
+  } = useFileExplorer(path);
+
   const [sessionId, setSessionId] = useState<string>();
   const [status, setStatus] = useState<ChatStatus>("ready");
   const [autoApprove, setAutoApprove] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string>();
-  const [fileContent, setFileContent] = useState<string>();
-  const [imageData, setImageData] = useState<ImageData>();
   const [codeSelections, setCodeSelections] = useState<CodeSelection[]>([]);
-
-  const selectedFileRef = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    selectedFileRef.current = selectedFile;
-  }, [selectedFile]);
-
-  const refreshTree = useCallback(async () => {
-    try {
-      const newTree = await ipc.client.fs.getFileTree({ path });
-      setTree(newTree);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [path]);
-
-  const refreshSelectedFile = useCallback(async () => {
-    const current = selectedFileRef.current;
-    if (!current) return;
-    try {
-      const content = await ipc.client.fs.readFile({
-        filePath: `${path}/${current}`,
-      });
-      setFileContent(content);
-    } catch (error) {
-      console.error(error);
-      setFileContent(undefined);
-    }
-  }, [path]);
-
-  useEffect(() => {
-    refreshTree();
-  }, [refreshTree]);
-
-  const handleSelectFile = useCallback(
-    async (relativePath: string) => {
-      setSelectedFile(relativePath);
-      setFileContent(undefined);
-      setImageData(undefined);
-
-      const filePath = `${path}/${relativePath}`;
-
-      try {
-        if (isImageFile(relativePath)) {
-          const base64 = await ipc.client.fs.readFileAsBase64({ filePath });
-          setImageData({
-            base64,
-            mediaType: getMediaType(relativePath),
-          });
-        } else {
-          const content = await ipc.client.fs.readFile({ filePath });
-          setFileContent(content);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    [path],
-  );
 
   const loadSession = useCallback(
     async (id: string) => {
