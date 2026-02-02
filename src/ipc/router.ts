@@ -4,6 +4,7 @@ import { chat } from "./chat";
 import { fs } from "./fs";
 import { project } from "./project";
 import { shell } from "./shell";
+import { terminal } from "./terminal";
 import { theme } from "./theme";
 import { window } from "./window";
 
@@ -16,4 +17,5 @@ export const router = {
   app,
   project,
   shell,
+  terminal,
 };
