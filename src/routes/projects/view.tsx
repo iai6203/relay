@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import type { ChatStatus } from "ai";
 import { z } from "zod";
 import {
   FileCodeIcon,
@@ -52,11 +51,14 @@ import {
   ConfirmationActions,
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
-import { FileTree, type TreeItem } from "@/components/ai/file-tree";
-import { CodeViewer, type CodeSelection } from "@/components/ai/code-viewer";
+import { FileTree } from "@/components/ai/file-tree";
+import { CodeViewer } from "@/components/ai/code-viewer";
 import { SessionList } from "@/components/ai/session-list";
 import { BashTool } from "@/components/ai/bash-tool";
 import { EditTool } from "@/components/ai/edit-tool";
+import { useFileExplorer } from "@/hooks/use-file-explorer";
+import { useChat } from "@/hooks/use-chat";
+import { useCodeSelections } from "@/hooks/use-code-selections";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -65,14 +67,8 @@ import {
 } from "@/components/ui/resizable";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ipc } from "@/ipc/manager";
-import type { ToolCallStatus, ChatMessage } from "@/ipc/chat/types";
-import {
-  getMediaType,
-  type ImageData,
-  ImageViewer,
-  isImageFile,
-} from "@/components/ai/image-viewer";
+import type { ToolCallStatus } from "@/ipc/chat/types";
+import { ImageViewer } from "@/components/ai/image-viewer";
 import { Badge } from "@/components/ui/badge";
 
 function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
@@ -97,295 +93,42 @@ const searchSchema = z.object({
 function ProjectViewPage() {
   const { path } = Route.useSearch();
 
-  const [tree, setTree] = useState<TreeItem[]>([]);
-  const [sessionId, setSessionId] = useState<string>();
-  const [status, setStatus] = useState<ChatStatus>("ready");
-  const [autoApprove, setAutoApprove] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string>();
-  const [fileContent, setFileContent] = useState<string>();
-  const [imageData, setImageData] = useState<ImageData>();
-  const [codeSelections, setCodeSelections] = useState<CodeSelection[]>([]);
+  const {
+    tree,
+    selectedFile,
+    fileContent,
+    imageData,
+    refreshTree,
+    refreshSelectedFile,
+    handleSelectFile,
+  } = useFileExplorer(path);
 
-  const selectedFileRef = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    selectedFileRef.current = selectedFile;
-  }, [selectedFile]);
-
-  const refreshTree = useCallback(async () => {
-    try {
-      const newTree = await ipc.client.fs.getFileTree({ path });
-      setTree(newTree);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [path]);
-
-  const refreshSelectedFile = useCallback(async () => {
-    const current = selectedFileRef.current;
-    if (!current) return;
-    try {
-      const content = await ipc.client.fs.readFile({
-        filePath: `${path}/${current}`,
-      });
-      setFileContent(content);
-    } catch (error) {
-      console.error(error);
-      setFileContent(undefined);
-    }
-  }, [path]);
-
-  useEffect(() => {
-    refreshTree();
-  }, [refreshTree]);
-
-  const handleSelectFile = useCallback(
-    async (relativePath: string) => {
-      setSelectedFile(relativePath);
-      setFileContent(undefined);
-      setImageData(undefined);
-
-      const filePath = `${path}/${relativePath}`;
-
-      try {
-        if (isImageFile(relativePath)) {
-          const base64 = await ipc.client.fs.readFileAsBase64({ filePath });
-          setImageData({
-            base64,
-            mediaType: getMediaType(relativePath),
-          });
-        } else {
-          const content = await ipc.client.fs.readFile({ filePath });
-          setFileContent(content);
-        }
-      } catch (error) {
-        console.error(error);
-      }
+  const {
+    status,
+    messages,
+    autoApprove,
+    setAutoApprove,
+    loadSession,
+    resetSession,
+    handlePermissionResponse,
+    submit,
+  } = useChat({
+    path,
+    onToolResult: () => {
+      refreshTree();
+      refreshSelectedFile();
     },
-    [path],
-  );
+  });
 
-  const loadSession = useCallback(
-    async (id: string) => {
-      setSessionId(id);
-      try {
-        const data = await ipc.client.ai.getSession({ path, sessionId: id });
-        setMessages(data);
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    [path],
-  );
-
-  const handlePermissionResponse = useCallback(
-    async (
-      requestId: string,
-      toolUseId: string,
-      decision: "allow" | "deny",
-      message?: string,
-    ) => {
-      await ipc.client.ai.respondToPermission({
-        requestId,
-        decision,
-        message,
-      });
-
-      setMessages((prev) =>
-        prev.map((msg) => ({
-          ...msg,
-          blocks: msg.blocks.map((b) => {
-            if (b.type === "permission_request" && b.requestId === requestId) {
-              return { ...b, decision };
-            }
-            if (b.type === "tool_call" && b.toolUseId === toolUseId) {
-              return {
-                ...b,
-                status:
-                  decision === "allow"
-                    ? ("running" as const)
-                    : ("denied" as const),
-              };
-            }
-            return b;
-          }),
-        })),
-      );
-    },
-    [],
-  );
+  const { codeSelections, addSelection, removeSelection, buildPrompt } =
+    useCodeSelections();
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
       if (!message.text.trim()) return;
-
-      // Build prompt with code selection context
-      let prompt = message.text;
-      if (codeSelections.length > 0) {
-        const references = codeSelections
-          .map((sel) => {
-            const lineInfo =
-              sel.startLine === sel.endLine
-                ? `${sel.startLine}`
-                : `${sel.startLine}-${sel.endLine}`;
-            return `- @${sel.filePath}#L${lineInfo}`;
-          })
-          .join("\n");
-        prompt = `${references}\n\n${message.text}`;
-        setCodeSelections([]);
-      }
-
-      const userMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: prompt,
-        blocks: [],
-      };
-
-      const assistantId = crypto.randomUUID();
-      const assistantMessage: ChatMessage = {
-        id: assistantId,
-        role: "assistant",
-        content: "",
-        blocks: [],
-      };
-
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      setStatus("submitted");
-
-      try {
-        const stream = await ipc.client.ai.chat({
-          cwd: path,
-          sessionId,
-          prompt,
-          autoApprove,
-        });
-
-        for await (const event of stream) {
-          switch (event.type) {
-            case "init":
-              setSessionId(event.sessionId);
-              break;
-
-            case "text":
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantId
-                    ? {
-                        ...msg,
-                        content: msg.content + event.text,
-                        blocks: [
-                          ...msg.blocks,
-                          { type: "text" as const, text: event.text },
-                        ],
-                      }
-                    : msg,
-                ),
-              );
-              break;
-
-            case "tool_call":
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantId
-                    ? {
-                        ...msg,
-                        blocks: [
-                          ...msg.blocks,
-                          {
-                            type: "tool_call" as const,
-                            toolUseId: event.toolUseId,
-                            toolName: event.toolName,
-                            input: event.input,
-                            status: "running" as const,
-                          },
-                        ],
-                      }
-                    : msg,
-                ),
-              );
-              break;
-
-            case "permission_request":
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id !== assistantId) return msg;
-                  return {
-                    ...msg,
-                    blocks: msg.blocks
-                      .map((b) =>
-                        b.type === "tool_call" &&
-                        b.toolUseId === event.toolUseId
-                          ? {
-                              ...b,
-                              status: "approval-requested" as const,
-                            }
-                          : b,
-                      )
-                      .concat({
-                        type: "permission_request" as const,
-                        requestId: event.requestId,
-                        toolUseId: event.toolUseId,
-                        toolName: event.toolName,
-                        input: event.input,
-                        decisionReason: event.decisionReason,
-                        blockedPath: event.blockedPath,
-                      }),
-                  };
-                }),
-              );
-              break;
-
-            case "tool_result":
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id !== assistantId) return msg;
-                  return {
-                    ...msg,
-                    blocks: msg.blocks.map((b) =>
-                      b.type === "tool_call" && b.toolUseId === event.toolUseId
-                        ? {
-                            ...b,
-                            status: event.isError
-                              ? ("error" as const)
-                              : ("completed" as const),
-                            output: event.output,
-                            isError: event.isError,
-                          }
-                        : b,
-                    ),
-                  };
-                }),
-              );
-              refreshTree();
-              refreshSelectedFile();
-              break;
-
-            case "result":
-              if (event.sessionId) {
-                setSessionId(event.sessionId);
-              }
-              break;
-
-            case "error":
-              console.error("[chat stream] error:", event.message);
-              break;
-          }
-        }
-      } catch (error) {
-        console.error("Chat error:", error);
-      } finally {
-        setStatus("ready");
-      }
+      await submit(buildPrompt(message.text));
     },
-    [
-      path,
-      sessionId,
-      autoApprove,
-      codeSelections,
-      refreshTree,
-      refreshSelectedFile,
-    ],
+    [submit, buildPrompt],
   );
 
   return (
@@ -416,7 +159,7 @@ function ProjectViewPage() {
               content={fileContent}
               onSelectionChange={(selection) => {
                 if (selection) {
-                  setCodeSelections((prev) => [...prev, selection]);
+                  addSelection(selection);
                 }
               }}
             />
@@ -439,10 +182,7 @@ function ProjectViewPage() {
               variant="outline"
               size="sm"
               disabled={status !== "ready"}
-              onClick={() => {
-                setSessionId(undefined);
-                setMessages([]);
-              }}
+              onClick={resetSession}
             >
               <PlusIcon />
               New Chat
@@ -661,11 +401,7 @@ function ProjectViewPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setCodeSelections((prev) =>
-                            prev.filter((_, i) => i !== index),
-                          )
-                        }
+                        onClick={() => removeSelection(index)}
                         className="text-muted-foreground hover:text-foreground ml-1"
                       >
                         <XIcon className="size-3" />
