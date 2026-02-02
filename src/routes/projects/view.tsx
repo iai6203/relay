@@ -3,10 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ChatStatus } from "ai";
 import { z } from "zod";
 import {
+  FileCodeIcon,
   HistoryIcon,
   MessageCircleIcon,
   PlusIcon,
   ShieldCheckIcon,
+  XIcon,
 } from "lucide-react";
 
 import type { ToolPart } from "@/components/ai-elements/tool";
@@ -24,6 +26,7 @@ import {
 import {
   PromptInput,
   PromptInputTextarea,
+  PromptInputHeader,
   PromptInputFooter,
   PromptInputTools,
   PromptInputSubmit,
@@ -50,7 +53,7 @@ import {
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
 import { FileTree, type TreeItem } from "@/components/ai/file-tree";
-import { CodeViewer } from "@/components/ai/code-viewer";
+import { CodeViewer, type CodeSelection } from "@/components/ai/code-viewer";
 import { SessionList } from "@/components/ai/session-list";
 import { BashTool } from "@/components/ai/bash-tool";
 import { EditTool } from "@/components/ai/edit-tool";
@@ -70,6 +73,7 @@ import {
   ImageViewer,
   isImageFile,
 } from "@/components/ai/image-viewer";
+import { Badge } from "@/components/ui/badge";
 
 function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
   switch (status) {
@@ -101,6 +105,7 @@ function ProjectViewPage() {
   const [selectedFile, setSelectedFile] = useState<string>();
   const [fileContent, setFileContent] = useState<string>();
   const [imageData, setImageData] = useState<ImageData>();
+  const [codeSelections, setCodeSelections] = useState<CodeSelection[]>([]);
 
   const selectedFileRef = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -214,10 +219,26 @@ function ProjectViewPage() {
     async (message: PromptInputMessage) => {
       if (!message.text.trim()) return;
 
+      // Build prompt with code selection context
+      let prompt = message.text;
+      if (codeSelections.length > 0) {
+        const references = codeSelections
+          .map((sel) => {
+            const lineInfo =
+              sel.startLine === sel.endLine
+                ? `${sel.startLine}`
+                : `${sel.startLine}-${sel.endLine}`;
+            return `- @${sel.filePath}#L${lineInfo}`;
+          })
+          .join("\n");
+        prompt = `${references}\n\n${message.text}`;
+        setCodeSelections([]);
+      }
+
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
-        content: message.text,
+        content: prompt,
         blocks: [],
       };
 
@@ -236,7 +257,7 @@ function ProjectViewPage() {
         const stream = await ipc.client.ai.chat({
           cwd: path,
           sessionId,
-          prompt: message.text,
+          prompt,
           autoApprove,
         });
 
@@ -357,7 +378,14 @@ function ProjectViewPage() {
         setStatus("ready");
       }
     },
-    [path, sessionId, autoApprove, refreshTree, refreshSelectedFile],
+    [
+      path,
+      sessionId,
+      autoApprove,
+      codeSelections,
+      refreshTree,
+      refreshSelectedFile,
+    ],
   );
 
   return (
@@ -383,7 +411,15 @@ function ProjectViewPage() {
               <ImageViewer imageData={imageData} selectedFile={selectedFile} />
             </div>
           ) : selectedFile && fileContent != null ? (
-            <CodeViewer filePath={selectedFile} content={fileContent} />
+            <CodeViewer
+              filePath={selectedFile}
+              content={fileContent}
+              onSelectionChange={(selection) => {
+                if (selection) {
+                  setCodeSelections((prev) => [...prev, selection]);
+                }
+              }}
+            />
           ) : (
             <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
               Select a file to view
@@ -434,7 +470,7 @@ function ProjectViewPage() {
               ) : (
                 messages.map((msg) => (
                   <Message key={msg.id} from={msg.role}>
-                    <MessageContent>
+                    <MessageContent className="whitespace-pre-wrap">
                       {msg.role === "user" ? (
                         msg.content
                       ) : (
@@ -609,6 +645,35 @@ function ProjectViewPage() {
 
           <div className="mx-auto w-full">
             <PromptInput onSubmit={handleSubmit}>
+              {codeSelections.length > 0 && (
+                <PromptInputHeader>
+                  {codeSelections.map((sel, index) => (
+                    <Badge
+                      key={`${sel.filePath}-${sel.startLine}-${index}`}
+                      variant="outline"
+                    >
+                      <FileCodeIcon className="text-muted-foreground size-3.5" />
+                      <span className="text-foreground font-mono">
+                        {sel.filePath.split("/").pop()}:
+                        {sel.startLine === sel.endLine
+                          ? sel.startLine
+                          : `${sel.startLine}-${sel.endLine}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCodeSelections((prev) =>
+                            prev.filter((_, i) => i !== index),
+                          )
+                        }
+                        className="text-muted-foreground hover:text-foreground ml-1"
+                      >
+                        <XIcon className="size-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </PromptInputHeader>
+              )}
               <PromptInputTextarea placeholder="Message" />
               <PromptInputFooter>
                 <PromptInputTools>
