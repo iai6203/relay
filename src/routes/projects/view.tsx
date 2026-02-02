@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import {
@@ -52,12 +52,13 @@ import {
   ConfirmationAction,
 } from "@/components/ai-elements/confirmation";
 import { FileTree } from "@/components/ai/file-tree";
-import { CodeViewer, type CodeSelection } from "@/components/ai/code-viewer";
+import { CodeViewer } from "@/components/ai/code-viewer";
 import { SessionList } from "@/components/ai/session-list";
 import { BashTool } from "@/components/ai/bash-tool";
 import { EditTool } from "@/components/ai/edit-tool";
 import { useFileExplorer } from "@/hooks/use-file-explorer";
 import { useChat } from "@/hooks/use-chat";
+import { useCodeSelections } from "@/hooks/use-code-selections";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -119,30 +120,15 @@ function ProjectViewPage() {
     },
   });
 
-  const [codeSelections, setCodeSelections] = useState<CodeSelection[]>([]);
+  const { codeSelections, addSelection, removeSelection, buildPrompt } =
+    useCodeSelections();
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
       if (!message.text.trim()) return;
-
-      let prompt = message.text;
-      if (codeSelections.length > 0) {
-        const references = codeSelections
-          .map((sel) => {
-            const lineInfo =
-              sel.startLine === sel.endLine
-                ? `${sel.startLine}`
-                : `${sel.startLine}-${sel.endLine}`;
-            return `- @${sel.filePath}#L${lineInfo}`;
-          })
-          .join("\n");
-        prompt = `${references}\n\n${message.text}`;
-        setCodeSelections([]);
-      }
-
-      await submit(prompt);
+      await submit(buildPrompt(message.text));
     },
-    [codeSelections, submit],
+    [submit, buildPrompt],
   );
 
   return (
@@ -173,7 +159,7 @@ function ProjectViewPage() {
               content={fileContent}
               onSelectionChange={(selection) => {
                 if (selection) {
-                  setCodeSelections((prev) => [...prev, selection]);
+                  addSelection(selection);
                 }
               }}
             />
@@ -415,11 +401,7 @@ function ProjectViewPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setCodeSelections((prev) =>
-                            prev.filter((_, i) => i !== index),
-                          )
-                        }
+                        onClick={() => removeSelection(index)}
                         className="text-muted-foreground hover:text-foreground ml-1"
                       >
                         <XIcon className="size-3" />
