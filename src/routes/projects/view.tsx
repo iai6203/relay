@@ -69,6 +69,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { ToolCallStatus } from "@/ipc/chat/types";
 import { ImageViewer } from "@/components/ai/image-viewer";
+import { ProjectTerminal } from "@/components/projects/project-terminal";
 import { Badge } from "@/components/ui/badge";
 
 function mapStatusToToolState(status: ToolCallStatus): ToolPart["state"] {
@@ -146,29 +147,42 @@ function ProjectViewPage() {
 
       <ResizableHandle withHandle />
 
-      {/* CodeViewer / ImageViewer */}
+      {/* CodeViewer / ImageViewer + Terminal */}
       <ResizablePanel defaultSize={60} minSize={20}>
-        <div className="h-full min-h-0 overflow-hidden">
-          {selectedFile && imageData ? (
-            <div className="flex h-full items-center justify-center overflow-auto">
-              <ImageViewer imageData={imageData} selectedFile={selectedFile} />
+        <ResizablePanelGroup direction="vertical">
+          <ResizablePanel defaultSize={70} minSize={20}>
+            <div className="h-full min-h-0 overflow-hidden">
+              {selectedFile && imageData ? (
+                <div className="flex h-full items-center justify-center overflow-auto">
+                  <ImageViewer
+                    imageData={imageData}
+                    selectedFile={selectedFile}
+                  />
+                </div>
+              ) : selectedFile && fileContent != null ? (
+                <CodeViewer
+                  filePath={selectedFile}
+                  content={fileContent}
+                  onSelectionChange={(selection) => {
+                    if (selection) {
+                      addSelection(selection);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                  Select a file to view
+                </div>
+              )}
             </div>
-          ) : selectedFile && fileContent != null ? (
-            <CodeViewer
-              filePath={selectedFile}
-              content={fileContent}
-              onSelectionChange={(selection) => {
-                if (selection) {
-                  addSelection(selection);
-                }
-              }}
-            />
-          ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-              Select a file to view
-            </div>
-          )}
-        </div>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          <ResizablePanel defaultSize={30} minSize={10}>
+            <ProjectTerminal cwd={path} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </ResizablePanel>
 
       <ResizableHandle withHandle />
