@@ -1,9 +1,11 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
 import { ipc } from "@/ipc/manager";
 import type { Project } from "@/store";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -37,7 +39,7 @@ function ProjectsPage() {
           {projects.map((project) => (
             <li
               key={project.path}
-              className="flex items-center gap-2 rounded-md border p-2"
+              className="relative flex items-center gap-2 rounded-md border p-2"
             >
               <Link
                 to="/projects/view"
@@ -47,13 +49,15 @@ function ProjectsPage() {
                 <p className="font-medium">{project.name}</p>
                 <p className="text-muted-foreground text-sm">{project.path}</p>
               </Link>
-              <Button
-                variant="destructive"
-                size="lg"
-                onClick={() => handleDeleteProject(project)}
+              <ProjectDeleteButton
+                project={project}
+                onDelete={handleDeleteProject}
+                variant="ghost"
+                size="icon-sm"
+                className="absolute top-2 right-2"
               >
-                삭제
-              </Button>
+                <Trash2 />
+              </ProjectDeleteButton>
             </li>
           ))}
         </ul>
