@@ -29,10 +29,6 @@ import {
   PromptInputFooter,
   PromptInputTools,
   PromptInputSubmit,
-  PromptInputActionMenu,
-  PromptInputActionMenuTrigger,
-  PromptInputActionMenuContent,
-  PromptInputActionAddAttachments,
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import {
@@ -442,12 +438,6 @@ function ProjectViewPage() {
                       Auto-approve
                     </Label>
                   </div>
-                  <PromptInputActionMenu>
-                    <PromptInputActionMenuTrigger />
-                    <PromptInputActionMenuContent>
-                      <PromptInputActionAddAttachments />
-                    </PromptInputActionMenuContent>
-                  </PromptInputActionMenu>
                 </PromptInputTools>
                 <PromptInputSubmit status={status} />
               </PromptInputFooter>
