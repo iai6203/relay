@@ -3,7 +3,6 @@
 import { Menu, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/tailwind";
@@ -14,13 +13,9 @@ import { PlaceholderLogo } from "@/components/ui/placeholder-logo";
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
-  const { t } = useTranslation();
   const matchRoute = useMatchRoute();
 
-  const navItems = [
-    { label: t("titleHomePage"), to: "/" },
-    { label: "Projects", to: "/projects" },
-  ];
+  const navItems = [{ label: "Projects", to: "/projects" }];
 
   const navigationContainerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
