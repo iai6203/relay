@@ -1,4 +1,5 @@
 import { type ComponentProps, useEffect, useState } from "react";
+import { Trash } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { ipc } from "@/ipc/manager";
-import { Trash } from "lucide-react";
 
 interface Session {
   sessionId: string;
