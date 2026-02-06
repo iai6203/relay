@@ -1,4 +1,5 @@
 import { type ComponentProps, useEffect, useState } from "react";
+import { Trash } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -57,14 +58,37 @@ export function SessionList({
                 {sessions.map((session) => (
                   <TableRow
                     key={session.sessionId}
-                    className="cursor-pointer"
+                    className="w-full cursor-pointer"
                     onClick={() => {
                       onSelectSession?.(session.sessionId);
                       setOpen(false);
                     }}
                   >
-                    <TableCell className="max-w-0 truncate text-xs">
-                      {session.firstMessage ?? "-"}
+                    <TableCell className="flex w-full justify-between">
+                      <div className="w-72 truncate text-xs">
+                        {session.firstMessage ?? "-"}
+                      </div>
+
+                      <Button
+                        size="icon-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          ipc.client.ai
+                            .deleteSession({
+                              path,
+                              sessionId: session.sessionId,
+                            })
+                            .then(() => {
+                              setSessions((prev) =>
+                                prev.filter(
+                                  (s) => s.sessionId !== session.sessionId,
+                                ),
+                              );
+                            });
+                        }}
+                      >
+                        <Trash />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

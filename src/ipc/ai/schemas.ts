@@ -44,6 +44,11 @@ export const getSessionInputSchema = z.object({
   sessionId: z.string().min(1),
 });
 
+export const deleteSessionInputSchema = z.object({
+  path: z.string().min(1),
+  sessionId: z.string().min(1),
+});
+
 export const permissionResponseSchema = z.object({
   requestId: z.string(),
   decision: z.enum(["allow", "deny"]),

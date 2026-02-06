@@ -3,6 +3,7 @@ import type { PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import { os, eventIterator } from "@orpc/server";
 
 import {
+  deleteSession as deleteSessionFile,
   findClaudeExecutable,
   readSession,
   readSessions,
@@ -11,6 +12,7 @@ import { permissionBus } from "./permission-bus";
 import {
   chatInputSchema,
   chatEventSchema,
+  deleteSessionInputSchema,
   getSessionInputSchema,
   getSessionsInputSchema,
   permissionResponseSchema,
@@ -198,6 +200,12 @@ export const getSession = os
   .input(getSessionInputSchema)
   .handler(async ({ input }) => {
     return readSession(input.path, input.sessionId);
+  });
+
+export const deleteSession = os
+  .input(deleteSessionInputSchema)
+  .handler(async ({ input }) => {
+    await deleteSessionFile(input.path, input.sessionId);
   });
 
 export const respondToPermission = os

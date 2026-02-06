@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -61,6 +61,14 @@ export async function readSessions(path: string) {
       };
     }),
   );
+}
+
+export async function deleteSession(
+  path: string,
+  sessionId: string,
+): Promise<void> {
+  const filePath = join(getProjectDir(path), `${sessionId}.jsonl`);
+  await rm(filePath);
 }
 
 export async function readSession(
