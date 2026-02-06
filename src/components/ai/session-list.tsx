@@ -72,7 +72,6 @@ export function SessionList({
                       <Button
                         size="icon-xs"
                         onClick={(e) => {
-                          console.log("[TEST] remove");
                           e.stopPropagation();
                           ipc.client.ai
                             .deleteSession({
