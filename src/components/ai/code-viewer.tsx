@@ -1,5 +1,5 @@
 import type { BundledLanguage } from "shiki";
-import { CheckIcon, FileIcon } from "lucide-react";
+import { FileIcon, SparklesIcon } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 import {
@@ -130,8 +130,9 @@ export function CodeViewer({
       }
     }
 
-    // Calculate position for floating button
-    const rangeRect = range.getBoundingClientRect();
+    // Calculate position for floating button (use first rect for start point)
+    const startRect = range.getClientRects()[0];
+    if (!startRect) return;
     const containerRect = container.getBoundingClientRect();
 
     setPendingSelection({
@@ -139,8 +140,8 @@ export function CodeViewer({
       startLine,
       endLine,
       selectedText,
-      top: rangeRect.top - containerRect.top - 32, // 32px above selection
-      left: rangeRect.left - containerRect.left + rangeRect.width / 2,
+      top: startRect.top - containerRect.top - 32,
+      left: startRect.left - containerRect.left,
     });
   }, [filePath, onSelectionChange]);
 
@@ -176,20 +177,20 @@ export function CodeViewer({
       {/* Floating confirmation button */}
       {pendingSelection && (
         <div
-          className="absolute z-50 -translate-x-1/2"
+          className="absolute z-50"
           style={{
             top: pendingSelection.top,
             left: pendingSelection.left,
           }}
         >
           <Button
-            size="xs"
-            variant="secondary"
+            size="sm"
+            variant="default"
+            className="hover:bg-primary"
             onClick={handleConfirm}
-            className="shadow-md"
           >
-            <CheckIcon size={12} />
-            <span className="font-mono text-xs">
+            <SparklesIcon size={12} />
+            <span>
               {pendingSelection.startLine === pendingSelection.endLine
                 ? `Line ${pendingSelection.startLine}`
                 : `Lines ${pendingSelection.startLine}-${pendingSelection.endLine}`}
