@@ -1,6 +1,6 @@
 {
-  "name": "wedding",
-  "productName": "wedding",
+  "name": "relay",
+  "productName": "relay",
   "version": "0.0.1",
   "description": "",
   "main": ".vite/build/main.js",
