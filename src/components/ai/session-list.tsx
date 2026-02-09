@@ -1,6 +1,17 @@
 import { type ComponentProps, useEffect, useState } from "react";
 import { Trash } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent as AlertDialogContent_,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader as AlertDialogHeader_,
+  AlertDialogTitle as AlertDialogTitle_,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -69,26 +80,56 @@ export function SessionList({
                         {session.firstMessage ?? "-"}
                       </div>
 
-                      <Button
-                        size="icon-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          ipc.client.ai
-                            .deleteSession({
-                              path,
-                              sessionId: session.sessionId,
-                            })
-                            .then(() => {
-                              setSessions((prev) =>
-                                prev.filter(
-                                  (s) => s.sessionId !== session.sessionId,
-                                ),
-                              );
-                            });
-                        }}
-                      >
-                        <Trash />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="icon-xs"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent_ size="sm">
+                          <AlertDialogHeader_>
+                            <AlertDialogTitle_>
+                              세션을 삭제하시겠습니까?
+                            </AlertDialogTitle_>
+                            <AlertDialogDescription>
+                              삭제된 세션은 복구할 수 없습니다.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader_>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel
+                              size="sm"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              취소
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              size="sm"
+                              variant="destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                ipc.client.ai
+                                  .deleteSession({
+                                    path,
+                                    sessionId: session.sessionId,
+                                  })
+                                  .then(() => {
+                                    setSessions((prev) =>
+                                      prev.filter(
+                                        (s) =>
+                                          s.sessionId !== session.sessionId,
+                                      ),
+                                    );
+                                  });
+                              }}
+                            >
+                              삭제
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent_>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))}
