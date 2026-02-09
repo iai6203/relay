@@ -1,4 +1,4 @@
-# Wedding
+# Relay
 
 
 ## 1. 소개
