@@ -5,11 +5,11 @@ import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
-  AlertDialogContent as AlertDialogContent_,
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogHeader as AlertDialogHeader_,
-  AlertDialogTitle as AlertDialogTitle_,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -89,15 +89,15 @@ export function SessionList({
                             <Trash />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent_ size="sm">
-                          <AlertDialogHeader_>
-                            <AlertDialogTitle_>
+                        <AlertDialogContent size="sm">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
                               세션을 삭제하시겠습니까?
-                            </AlertDialogTitle_>
+                            </AlertDialogTitle>
                             <AlertDialogDescription>
                               삭제된 세션은 복구할 수 없습니다.
                             </AlertDialogDescription>
-                          </AlertDialogHeader_>
+                          </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel
                               size="sm"
@@ -128,7 +128,7 @@ export function SessionList({
                               삭제
                             </AlertDialogAction>
                           </AlertDialogFooter>
-                        </AlertDialogContent_>
+                        </AlertDialogContent>
                       </AlertDialog>
                     </TableCell>
                   </TableRow>
