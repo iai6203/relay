@@ -27,8 +27,8 @@ const config: ForgeConfig = {
       name: "@electron-forge/publisher-github",
       config: {
         repository: {
-          owner: "LuanRoger",
-          name: "electron-shadcn",
+          owner: "iai6203",
+          name: "relay",
         },
         draft: true,
         prerelease: false,

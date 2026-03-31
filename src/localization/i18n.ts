@@ -6,7 +6,7 @@ i18n.use(initReactI18next).init({
   resources: {
     en: {
       translation: {
-        appName: "electron-shadcn",
+        appName: "relay",
         titleHomePage: "Home Page",
         titleSecondPage: "Second Page",
         documentation: "Documentation",
@@ -15,7 +15,7 @@ i18n.use(initReactI18next).init({
     },
     "pt-BR": {
       translation: {
-        appName: "electron-shadcn",
+        appName: "relay",
         titleHomePage: "Página Inicial",
         titleSecondPage: "Segunda Página",
         documentation: "Documentação",

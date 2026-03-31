@@ -9,7 +9,7 @@ export default function BaseLayout({
 }) {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <DragWindowRegion title="electron-shadcn" />
+      <DragWindowRegion title="relay" />
       <Navigation />
       <main className="min-h-0 w-full flex-1">{children}</main>
     </div>
